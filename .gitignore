@@ -8,4 +8,6 @@
 .env
 .current_agent
 .current_infrastructure
-.venv.ipynb_checkpoints/
+.venv
+.ipynb_checkpoints/
+
