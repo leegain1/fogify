@@ -56,8 +56,8 @@ examples/uvc-sha256/               ← Jupyter에서 examples/로 바로 보임
 
 | # | 단계 | 할 일 | 완료 기준 |
 |---|---|---|---|
-| 0 | 계획 | 브랜치 생성, `research-docs/`, 이 문서 | 이 문서 커밋 |
-| 1 | 원본 가져오기 | `upstream/`에 소스만 복사 (`*.go`, `go.mod`, `app.js`, `Dockerfile`, `post.lua`). 출처·커밋·라이선스를 적은 `NOTICE.md` 작성 | 바이너리 없이 커밋 |
+| 0 ✅ | 계획 | 브랜치 생성, `research-docs/`, 이 문서 | 이 문서 커밋 |
+| 1 ✅ | 원본 가져오기 | `upstream/`에 소스만 복사 (`*.go`, `go.mod`, `app.js`, `Dockerfile`, `post.lua`). 출처·커밋·라이선스를 적은 `NOTICE.md` 작성 | 바이너리 없이 커밋 |
 | 2 | 원본 단독 실행 | Fogify 없이 `docker build` → `docker run --cpus 1 --memory 128m` → `curl -X POST "localhost:8080/compute?iter=100"` 응답 확인. iter별 응답 시간 대략 측정 | 결과를 문서에 기록 |
 | 3 | Fogify용 앱 | **server**: alpine 기반으로 빌드, 처리 시간 로그 추가. **client**: Go로 작성. `MODE=local`이면 같은 해시 함수를 직접 실행, `MODE=edge`면 서버로 POST. 작업마다 `tct_ms`를 CSV로 저장하고 `fogify.metrics.json`도 갱신. 변수: `ITER`, `PAYLOAD_BYTES`, `N_TASKS`, `INTERVAL` | 두 이미지 빌드, 로컬에서 두 모드 모두 동작 |
 | 4 | 토폴로지 | compose 작성. **nodes**: device(1코어, 낮은 클럭, 512M), edge(4코어, 2G). **networks**: device↔edge 링크 (기본 RTT 10ms, BW 100Mbps). **topology**: device-local, device-edge, edge-server. **scenarios**: RTT 단계 증가 / BW 단계 감소 / 엣지 `stress` | `fogify.deploy()` 성공 |
