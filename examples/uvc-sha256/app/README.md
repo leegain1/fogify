@@ -10,6 +10,8 @@
 
 로컬 처리와 엣지 서버 오프로딩은 같은 함수(`internal/work.Hash`)를 쓴다. 그래서 두 방식의 계산량은 정확히 같다.
 
+이미지에는 Fogify `stress` 액션용으로 `cpulimit`과 `stress-ng`가 들어 있다 (`stress`라는 이름으로 연결).
+
 ## 빌드
 
 ```bash
@@ -44,7 +46,7 @@ uvc-client run -mode edge-server -servers http://edge-server-1:8080,http://edge-
 - `server_compute_ms`: 엣지 서버가 계산에 쓴 시간 (로컬 처리에서는 빈 칸). `tct_ms - server_compute_ms` = 네트워크 + 대기 시간
 - `status`: `ok`, `error:...`, `http:<코드>`, `hash-mismatch`
 
-또 작업마다 `/fogify/metrics`에 `tct_us_last`, `tct_us_avg`, `tasks_done`, `mode_edge_server`를 정수로 씀 (Fogify 모니터링용).
+또 작업마다 `/fogify/metrics`에 `tct_us_last`, `tct_us_avg`, `tasks_done`, `mode_edge_server`를 정수로 씀 (Fogify 모니터링용). ※ 현재 Fogify 설정에서는 agent가 이 파일을 읽지 못한다 → [03 문서](../../../research-docs/03-uvc-sha256-fogify-deploy.md) 참고.
 
 ## Fogify 없이 동작 확인 (2026-10-05)
 

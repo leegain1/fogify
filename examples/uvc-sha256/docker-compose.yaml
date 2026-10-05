@@ -1,0 +1,111 @@
+# SHA-256 TCT experiment: local processing vs offloading to edge servers.
+#
+#   local ──edge-server-net-1──▶ edge-server-1
+#         └─edge-server-net-2──▶ edge-server-2
+#
+# CPU: Fogify sets a Docker CPU quota of cores * clock_speed / CPU_FREQ (.env: 2086),
+#      rounded to 1 decimal place.
+#        local        : 1 core  x 1043 MHz -> 0.5 CPU
+#        edge server  : 2 cores x 2086 MHz -> 2.0 CPU
+# Network: QoS is applied on each node's interface for that network.
+#          Measured: RTT = delay on local side + delay on edge server side
+#          (5ms + 5ms -> ~10ms; edge server side 50ms -> ~55ms).
+#          See research-docs/03-uvc-sha256-fogify-deploy.md.
+version: '3.7'
+
+services:
+  local:
+    image: uvc-sha256:0.1
+    command: ["uvc-client", "idle"]
+  edge-server:
+    image: uvc-sha256:0.1
+    command: ["uvc-server"]
+
+x-fogify:
+  nodes:
+  - name: local-node
+    capabilities:
+      processor:
+        cores: 1
+        clock_speed: 1043
+      memory: 0.5G
+  - name: edge-server-node
+    capabilities:
+      processor:
+        cores: 2
+        clock_speed: 2086
+      memory: 1G
+
+  networks:
+  - name: edge-server-net-1
+    bidirectional:
+      bandwidth: 100Mbps
+      latency:
+        delay: 5ms
+  - name: edge-server-net-2
+    bidirectional:
+      bandwidth: 100Mbps
+      latency:
+        delay: 5ms
+
+  topology:
+  - label: local
+    service: local
+    node: local-node
+    replicas: 1
+    networks:
+    - edge-server-net-1
+    - edge-server-net-2
+  - label: edge-server-1
+    service: edge-server
+    node: edge-server-node
+    replicas: 1
+    networks:
+    - edge-server-net-1
+  - label: edge-server-2
+    service: edge-server
+    node: edge-server-node
+    replicas: 1
+    networks:
+    - edge-server-net-2
+
+  # time = seconds to wait after the previous action (FogifySDK.scenario_execution).
+  # Network actions are applied on the edge server's side, so only that
+  # local <-> edge server path changes.
+  scenarios:
+  # RTT to edge-server-1 grows step by step every 30 s, then returns to the base value.
+  # Expected RTT: 30 -> 55 -> 105 -> 10 ms (local side stays 5ms).
+  - name: rtt-steps
+    actions:
+    - {time: 30, position: 0, instance_type: edge-server-1, instances: 1,
+       action: {type: network, parameters: {network: edge-server-net-1,
+         bidirectional: {bandwidth: 100Mbps, latency: {delay: 25ms}}}}}
+    - {time: 30, position: 1, instance_type: edge-server-1, instances: 1,
+       action: {type: network, parameters: {network: edge-server-net-1,
+         bidirectional: {bandwidth: 100Mbps, latency: {delay: 50ms}}}}}
+    - {time: 30, position: 2, instance_type: edge-server-1, instances: 1,
+       action: {type: network, parameters: {network: edge-server-net-1,
+         bidirectional: {bandwidth: 100Mbps, latency: {delay: 100ms}}}}}
+    - {time: 30, position: 3, instance_type: edge-server-1, instances: 1,
+       action: {type: network, parameters: {network: edge-server-net-1,
+         bidirectional: {bandwidth: 100Mbps, latency: {delay: 5ms}}}}}
+  # Bandwidth to edge-server-1 drops step by step (use a large -payload to see the effect).
+  - name: bw-steps
+    actions:
+    - {time: 30, position: 0, instance_type: edge-server-1, instances: 1,
+       action: {type: network, parameters: {network: edge-server-net-1,
+         bidirectional: {bandwidth: 10Mbps, latency: {delay: 5ms}}}}}
+    - {time: 30, position: 1, instance_type: edge-server-1, instances: 1,
+       action: {type: network, parameters: {network: edge-server-net-1,
+         bidirectional: {bandwidth: 1Mbps, latency: {delay: 5ms}}}}}
+    - {time: 30, position: 2, instance_type: edge-server-1, instances: 1,
+       action: {type: network, parameters: {network: edge-server-net-1,
+         bidirectional: {bandwidth: 100Mbps, latency: {delay: 5ms}}}}}
+  # CPU stress on edge-server-1 for 60 s (edge-server-2 stays idle for comparison).
+  # cpu = percent of the node's CPU (limit = cpus * cpu), here 80% of 2.0 CPU.
+  - name: edge-server-1-stress
+    actions:
+    - {time: 30, position: 0, instance_type: edge-server-1, instances: 1,
+       action: {type: stress, parameters: {action: {cpu: 80, duration: 60}}}}
+    - {time: 90, position: 1, instance_type: edge-server-1, instances: 1,
+       action: {type: NOOP}}

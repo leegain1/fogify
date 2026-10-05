@@ -48,8 +48,10 @@
 2. **iter=100은 너무 가볍다** (2단계에서 확인: 계산 ≈ 0, 측정값은 HTTP 오버헤드뿐). 실험 범위는 **iter = 100k ~ 3M**으로 잡는다.
 3. **`FROM scratch` 이미지**: 셸이 없다. Fogify용 이미지는 alpine을 베이스로 쓴다.
 4. **유니커널(Nanos) 부분은 제외**: Fogify는 Docker 컨테이너만 다룬다. 원본은 "워크로드 출처"로만 쓴다.
-5. **Fogify 사용자 지표 파일**: 문서에는 `fogify.metrics.json`이라고 되어 있지만, 실제 agent 코드(`utils/monitoring.py`)는 컨테이너 안의 **`/fogify/metrics`**를 읽는다. 또 `isnumeric()` 검사 때문에 **정수 값만** 받는다. → TCT를 µs 정수로 기록한다.
-6. **CPU 제한은 "느린 CPU"가 아니라 "할당량"이다** (3단계에서 확인). Docker `--cpus`와 Fogify의 cgroup 제한은 100ms마다 정해진 양만 CPU를 쓰게 한다. 그래서 **짧은 작업은 제한을 받기 전에 끝나 버린다**. 실제로 iter=100k에서 0.5코어로 제한한 로컬(5.8ms)이 엣지 서버(7.4ms)보다 빨랐다. → 로컬이 느린 기기라는 효과가 나타나려면 **작업이 수십 ms 이상**이어야 한다. 4단계에서 Fogify의 `clock_speed` 제한도 같은 방식인지 확인한다.
+5. **Fogify 사용자 지표 파일**: 문서에는 `fogify.metrics.json`이라고 되어 있지만, 실제 agent 코드(`utils/monitoring.py`)는 컨테이너 안의 **`/fogify/metrics`**를 읽는다. 또 `isnumeric()` 검사 때문에 **정수 값만** 받는다. → TCT를 µs 정수로 기록한다. 단, 4단계에서 확인해 보니 현재 설정에서는 **수집되지 않는다** (agent에 `/var/lib/docker`가 마운트되어 있지 않음). → CSV를 주 결과로 쓴다.
+6. **CPU 제한은 "느린 CPU"가 아니라 "할당량"이다** (3단계에서 확인). Docker `--cpus`와 Fogify의 cgroup 제한은 100ms마다 정해진 양만 CPU를 쓰게 한다. 그래서 **짧은 작업은 제한을 받기 전에 끝나 버린다**. 실제로 iter=100k에서 0.5코어로 제한한 로컬(5.8ms)이 엣지 서버(7.4ms)보다 빨랐다. → 로컬이 느린 기기라는 효과가 나타나려면 **작업이 수십 ms 이상**이어야 한다. 4단계에서 확인: Fogify도 `cores × clock_speed / CPU_FREQ`를 같은 할당량(`NanoCpus`)으로 건다. 소수 첫째 자리로 반올림된다.
+7. **RTT = 로컬 쪽 delay + 엣지 서버 쪽 delay** (4단계 실측). 기본 5ms + 5ms → 약 10ms.
+8. **stress 액션은 컨테이너 안에서 `cpulimit`과 `stress`를 실행한다.** 이미지에 설치해 두었다. `cpu` 값은 노드 CPU의 퍼센트다.
 
 ## 폴더 구조
 
@@ -57,13 +59,14 @@
 research-docs/                     ← 내 연구 문서 (계획, 결과 기록)
   01-uvc-sha256-plan.md            ← 이 문서
   02-uvc-sha256-baseline.md        ← 2단계: 원본 단독 실행 결과
+  03-uvc-sha256-fogify-deploy.md   ← 4단계: Fogify 배포 확인
 examples/uvc-sha256/               ← Jupyter에서 examples/로 바로 보임
   upstream/                        ← 원본 소스 그대로 (바이너리 제외) + NOTICE
   app/                             ← Fogify용 앱 (이미지 1개로 서버와 클라이언트 둘 다)
     internal/work/                 ← SHA-256 반복 함수 (로컬과 엣지 서버가 같은 코드 사용)
     cmd/uvc-server/                ← 엣지 서버: /compute + 서버 계산 시간 헤더
     cmd/uvc-client/                ← 로컬: -mode local | edge-server, 작업마다 TCT를 CSV로 출력
-  docker-compose.yaml              ← (4단계) services + x-fogify
+  docker-compose.yaml              ← services + x-fogify (로컬 1, 엣지 서버 2, 시나리오 3개)
   uvc-sha256.ipynb                 ← (5단계) 배포 → 실행 → 수집 → 그래프 → undeploy
 ```
 
@@ -92,15 +95,15 @@ examples/uvc-sha256/               ← Jupyter에서 examples/로 바로 보임
 | 1 ✅ | 원본 가져오기 | `upstream/`에 소스만 복사, `NOTICE.md` 작성 | 바이너리 없이 커밋 |
 | 2 ✅ | 원본 단독 실행 | Fogify 없이 빌드하고 `--cpus 1 --memory 128m`으로 실행, iter별 시간 측정 | [02-uvc-sha256-baseline.md](02-uvc-sha256-baseline.md) |
 | 3 ✅ | Fogify용 앱 | `app/`: 공용 해시 함수, `uvc-server`(서버 계산 시간 헤더), `uvc-client`(`local`/`edge-server` 모드, CSV 출력, `/fogify/metrics`). 이미지 `uvc-sha256:0.1` | Fogify 없이 로컬 1 + 엣지 서버 2로 두 모드 모두 동작 확인 (`app/README.md`) |
-| 4 | 토폴로지 | compose 작성. **nodes**: local(낮은 CPU, 256~512M), edge-server(2코어, 1~2G). **networks**: 로컬↔엣지 서버 (기본 RTT 10ms, BW 100Mbps). **topology**: local 1, edge-server-1, edge-server-2. **scenarios**: RTT 단계 증가 / BW 단계 감소 / 엣지 서버 `stress`. 배포 후 `ping`으로 RTT 실측, `clock_speed` 효과 확인 | `fogify.deploy()` 성공, RTT 실측값 일치 |
+| 4 ✅ | 토폴로지 | compose 작성. **nodes**: local(낮은 CPU, 256~512M), edge-server(2코어, 1~2G). **networks**: 로컬↔엣지 서버 (기본 RTT 10ms, BW 100Mbps). **topology**: local 1, edge-server-1, edge-server-2. **scenarios**: RTT 단계 증가 / BW 단계 감소 / 엣지 서버 `stress`. 배포 후 `ping`으로 RTT 실측, `clock_speed` 효과 확인 | [03-uvc-sha256-fogify-deploy.md](03-uvc-sha256-fogify-deploy.md) |
 | 5 | 노트북 | deploy → `docker exec`로 로컬 처리와 엣지 서버 오프로딩 실행 → 시나리오 → CSV 수집 → 그래프 (TCT vs RTT, BW, 엣지 서버 부하, iter) → undeploy | 그래프 출력 |
-| 6 | 결과 정리 | `research-docs/03-uvc-sha256-results.md`: 설정, 그래프, 로컬 처리와 엣지 서버 오프로딩이 역전되는 지점 | 문서 커밋 |
+| 6 | 결과 정리 | `research-docs/04-uvc-sha256-results.md`: 설정, 그래프, 로컬 처리와 엣지 서버 오프로딩이 역전되는 지점 | 문서 커밋 |
 
 ## 실험 변수 (초안)
 
 | 변수 | 값 | 조절 방법 |
 |---|---|---|
-| RTT (로컬↔엣지 서버) | 2 / 10 / 50 / 100 / 200 ms | `networks` 지연 (양방향에 절반씩), 시나리오 `update_network` |
+| RTT (로컬↔엣지 서버) | 10 / 30 / 55 / 105 / 205 ms | 로컬 쪽 5ms 고정, 엣지 서버 쪽 delay를 `RTT − 5ms`로 (`update_network`) |
 | BW | 1 / 10 / 100 Mbps | `networks` bandwidth |
 | 엣지 서버 CPU 부하 | 0 / 50 / 90 % | 시나리오 `stress` |
 | 연산량 | iter = 100 / 100k / 1M / 3M | 클라이언트 `-iter` |
@@ -115,6 +118,6 @@ examples/uvc-sha256/               ← Jupyter에서 examples/로 바로 보임
 | 위험 | 대응 |
 |---|---|
 | CPU 제한이 할당량 방식이라 짧은 작업에는 효과가 없음 (주의점 6) | iter를 1M 이상으로 쓰거나, 작업 간 간격 없이 연속 실행. 4단계에서 Fogify의 cgroup 설정 확인 |
-| tc 지연이 Swarm 오버레이에서 의도대로 적용되는지 | 4단계에서 로컬 노드에서 `ping edge-server-1`로 RTT 실측 |
+| ~~tc 지연이 Swarm 오버레이에서 의도대로 적용되는지~~ | ✅ 4단계에서 ping으로 확인 (규칙 7) |
 | 노트북 PC 한 대라 로컬과 엣지 서버가 같은 CPU를 나눠 씀 | 총 할당 코어를 16스레드보다 충분히 작게 잡고, 다른 무거운 작업은 끈 상태에서 측정 |
-| `/fogify/metrics` 수집이 실제로 되는지 (agent가 컨테이너 파일 경로에 접근할 수 있는지 불확실) | CSV(stdout)를 주 결과로 쓰고, metrics는 보조 자료로만 사용 |
+| `/fogify/metrics` 수집 안 됨 (4단계 확인) | CSV(stdout)를 주 결과로 사용. 필요하면 Fogify agent에 `/var/lib/docker` 마운트 추가 |
