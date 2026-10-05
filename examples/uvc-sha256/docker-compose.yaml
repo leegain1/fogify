@@ -10,7 +10,7 @@
 # Network: QoS is applied on each node's interface for that network.
 #          Measured: RTT = delay on local side + delay on edge server side
 #          (5ms + 5ms -> ~10ms; edge server side 50ms -> ~55ms).
-#          See research-docs/03-uvc-sha256-fogify-deploy.md.
+#          See research-docs/uvc-sha256.md (section 4).
 version: '3.7'
 
 services:
