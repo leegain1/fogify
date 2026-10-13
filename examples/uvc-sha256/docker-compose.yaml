@@ -11,6 +11,8 @@
 #          Measured: RTT = delay on local side + delay on edge server side
 #          (5ms + 5ms -> ~10ms; edge server side 50ms -> ~55ms).
 #          See research-docs/uvc-sha256.md (section 4).
+# Bandwidth: use Mbit. In tc (and Fogify's RateUnit) "Mbps" means megaBYTES/s,
+#            so "100Mbps" would be 800 Mbit/s.
 version: '3.7'
 
 services:
@@ -39,12 +41,12 @@ x-fogify:
   networks:
   - name: edge-server-net-1
     bidirectional:
-      bandwidth: 100Mbps
+      bandwidth: 100Mbit
       latency:
         delay: 5ms
   - name: edge-server-net-2
     bidirectional:
-      bandwidth: 100Mbps
+      bandwidth: 100Mbit
       latency:
         delay: 5ms
 
@@ -79,28 +81,28 @@ x-fogify:
     actions:
     - {time: 30, position: 0, instance_type: edge-server-1, instances: 1,
        action: {type: network, parameters: {network: edge-server-net-1,
-         bidirectional: {bandwidth: 100Mbps, latency: {delay: 25ms}}}}}
+         bidirectional: {bandwidth: 100Mbit, latency: {delay: 25ms}}}}}
     - {time: 30, position: 1, instance_type: edge-server-1, instances: 1,
        action: {type: network, parameters: {network: edge-server-net-1,
-         bidirectional: {bandwidth: 100Mbps, latency: {delay: 50ms}}}}}
+         bidirectional: {bandwidth: 100Mbit, latency: {delay: 50ms}}}}}
     - {time: 30, position: 2, instance_type: edge-server-1, instances: 1,
        action: {type: network, parameters: {network: edge-server-net-1,
-         bidirectional: {bandwidth: 100Mbps, latency: {delay: 100ms}}}}}
+         bidirectional: {bandwidth: 100Mbit, latency: {delay: 100ms}}}}}
     - {time: 30, position: 3, instance_type: edge-server-1, instances: 1,
        action: {type: network, parameters: {network: edge-server-net-1,
-         bidirectional: {bandwidth: 100Mbps, latency: {delay: 5ms}}}}}
+         bidirectional: {bandwidth: 100Mbit, latency: {delay: 5ms}}}}}
   # Bandwidth to edge-server-1 drops step by step (use a large -payload to see the effect).
   - name: bw-steps
     actions:
     - {time: 30, position: 0, instance_type: edge-server-1, instances: 1,
        action: {type: network, parameters: {network: edge-server-net-1,
-         bidirectional: {bandwidth: 10Mbps, latency: {delay: 5ms}}}}}
+         bidirectional: {bandwidth: 10Mbit, latency: {delay: 5ms}}}}}
     - {time: 30, position: 1, instance_type: edge-server-1, instances: 1,
        action: {type: network, parameters: {network: edge-server-net-1,
-         bidirectional: {bandwidth: 1Mbps, latency: {delay: 5ms}}}}}
+         bidirectional: {bandwidth: 1Mbit, latency: {delay: 5ms}}}}}
     - {time: 30, position: 2, instance_type: edge-server-1, instances: 1,
        action: {type: network, parameters: {network: edge-server-net-1,
-         bidirectional: {bandwidth: 100Mbps, latency: {delay: 5ms}}}}}
+         bidirectional: {bandwidth: 100Mbit, latency: {delay: 5ms}}}}}
   # CPU stress on edge-server-1 for 60 s (edge-server-2 stays idle for comparison).
   # cpu = percent of the node's CPU (limit = cpus * cpu), here 80% of 2.0 CPU.
   - name: edge-server-1-stress

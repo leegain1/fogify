@@ -26,7 +26,8 @@
 | 3 | Fogify용 앱 (`uvc-server`, `uvc-client`) | ✅ |
 | 4 | 토폴로지 배포 확인 (로컬 1 + 엣지 서버 2) | ✅ |
 | 5 | 노트북으로 실험 A~E 실행 | ✅ |
-| 6 | 대역폭 문제 확인, 반복 측정, 연구 확장 | 다음 → [uvc-sha256.md 6절](uvc-sha256.md#6-다음-할-일) |
+| 6 | 대역폭 단위 문제 수정, 노트북 보완(RTT·stress 대기, n=30), 다시 실행 | ✅ |
+| 7 | 로컬 처리 분포 해석, 엣지 서버 격리, 연구 확장 | 다음 → [uvc-sha256.md 6절](uvc-sha256.md#6-다음-할-일) |
 
 ## 실행 방법
 
@@ -60,6 +61,8 @@ docker build -t uvc-sha256:0.1 examples/uvc-sha256/app
 | Fogify CPU 계산 | `cores × clock_speed / CPU_FREQ(2086)` → Docker `NanoCpus`. 소수 첫째 자리로 반올림 |
 | RTT | **로컬 쪽 delay + 엣지 서버 쪽 delay** (5+5 → 약 10ms). 엣지 서버마다 따로 조절 가능 |
 | stress 액션 | 컨테이너 안에서 `cpulimit` + `stress` 실행 → 이미지에 설치함. `cpu`는 노드 CPU의 % |
+| **대역폭 단위** | **`Mbit`로 쓸 것.** `Mbps`는 tc에서 MB/s라서 8배가 된다 (Fogify 문서와 예제가 틀림) |
+| 배포 직후 | 네트워크 규칙이 몇 초 늦게 적용됨 → RTT를 확인한 뒤 측정 |
 | 사용자 지표 | `/fogify/metrics`는 현재 수집되지 않음 → **클라이언트 CSV가 주 결과** |
 | Fogify 문서와 실제 코드 차이 | 지표 파일은 `fogify.metrics.json`이 아니라 `/fogify/metrics`. 시나리오 함수는 `execute_scenario`가 아니라 `scenario_execution`. `time`은 이전 액션 후 기다리는 초 |
 | 실험 결과 요약 | → [uvc-sha256.md 결과](uvc-sha256.md#5-실험-결과-노트북) |
