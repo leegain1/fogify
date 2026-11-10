@@ -1,0 +1,11 @@
+,tct_mean,tct_mean,regret_mean,regret_mean
+payload_kb,1.0,256.0,1.0,256.0
+policy,,,,
+Always-Edge1,117.6,402.2,24.3,293.3
+Always-Edge2,122.1,406.7,28.8,297.7
+Always-Local,129.0,129.0,35.7,20.0
+Model-Greedy,100.5,120.5,7.2,11.5
+Nearest-Edge,117.6,402.2,24.3,293.3
+Oracle,93.3,109.0,0.0,0.0
+QECO-net,102.0,140.1,8.7,31.1
+QECO-orig,119.8,127.9,26.5,18.9

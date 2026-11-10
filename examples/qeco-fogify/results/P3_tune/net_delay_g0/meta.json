@@ -1,0 +1,13 @@
+{
+ "variant": "net",
+ "episodes": 300,
+ "seed": 0,
+ "reward": "delay",
+ "gamma": 0.0,
+ "n_features": 12,
+ "n_lstm_state": 2,
+ "n_actions": 3,
+ "n_time": 1300,
+ "slot_ms": 10,
+ "max_delay_ms": 3000
+}

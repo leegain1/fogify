@@ -1,0 +1,15 @@
+{
+ "variant": "orig",
+ "episodes": 1000,
+ "seed": 0,
+ "reward": "delay",
+ "gamma": 0.9,
+ "n_features": 6,
+ "n_lstm_state": 2,
+ "n_actions": 3,
+ "n_time": 1300,
+ "slot_ms": 10,
+ "max_delay_ms": 3000,
+ "best_episode": 649,
+ "best_val_tct_ms": 125.23
+}
