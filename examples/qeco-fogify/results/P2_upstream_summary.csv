@@ -1,0 +1,5 @@
+run,episodes,QoE,Delay,Energy,Drop
+"ours (upstream code, this PC)",0-49,436.11,7.67,420.55,183.78
+"ours (upstream code, this PC)",950-999,811.86,5.73,370.92,37.1
+upstream reference (TrainedModel_20UE_2EN_RandomMode),0-49,392.97,7.7,424.04,182.34
+upstream reference (TrainedModel_20UE_2EN_RandomMode),950-999,750.43,5.97,346.76,53.74
