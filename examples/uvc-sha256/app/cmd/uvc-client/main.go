@@ -4,6 +4,7 @@
 //	uvc-client idle                       keep the container alive (default CMD)
 //	uvc-client run -mode local ...        compute on this node
 //	uvc-client run -mode edge-server ...  POST to -servers (round-robin)
+//	uvc-client agent ...                  HTTP server: the driver picks the location per task (agent.go)
 //
 // One CSV row per task is written to stdout, so results can be collected with
 // `docker exec <container> uvc-client run ...` from the notebook.
@@ -63,13 +64,15 @@ func main() {
 		<-sig
 	case "run":
 		run(parseRun(os.Args[2:]))
+	case "agent":
+		runAgent(os.Args[2:])
 	default:
 		usage()
 	}
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: uvc-client idle | uvc-client run -mode local|edge-server [flags]")
+	fmt.Fprintln(os.Stderr, "usage: uvc-client idle | uvc-client run -mode local|edge-server [flags] | uvc-client agent [flags]")
 	os.Exit(2)
 }
 

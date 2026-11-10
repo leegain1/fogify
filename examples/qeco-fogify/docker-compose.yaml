@@ -17,10 +17,10 @@ version: '3.7'
 
 services:
   local:
-    image: uvc-sha256:0.1
-    command: ["uvc-client", "idle"]
+    image: uvc-sha256:0.2
+    command: ["uvc-client", "agent"]   # HTTP agent on :8081 (Phase 4 driver)
   edge-server:
-    image: uvc-sha256:0.1
+    image: uvc-sha256:0.2
     command: ["uvc-server"]
 
 x-fogify:
