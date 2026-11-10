@@ -1,0 +1,7 @@
+cpuset,target,before,stress,change_%
+pinned,http://edge-server-1:8080,78.98,134.33,70.1
+pinned,http://edge-server-2:8080,78.81,78.58,-0.3
+pinned,local,147.59,,
+unpinned,http://edge-server-1:8080,66.77,108.93,63.1
+unpinned,http://edge-server-2:8080,67.76,86.34,27.4
+unpinned,local,113.61,,
