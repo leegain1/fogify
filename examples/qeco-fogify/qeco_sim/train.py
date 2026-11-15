@@ -29,6 +29,7 @@ DELAY_UNIT_MS = 100.0   # QoE uses delay in upstream slot units (0.1 s) so the r
 
 
 REWARD = "qoe"   # set from --reward
+ARRIVAL = "open"  # set from --arrival (Phase 3 models: open)
 
 
 def reward(env, slot):
@@ -95,7 +96,7 @@ def validate(variant, agent):
     agent.epsilon = 1.0
     tct = []
     for k in range(VAL_EPISODES):
-        env = TestbedMEC(variant=variant, seed=VAL_SEED + k)
+        env = TestbedMEC(variant=variant, seed=VAL_SEED + k, arrival=ARRIVAL)
         agent.lstm_history.extend([np.zeros(agent.n_lstm_state)] * agent.n_lstm_step)
         _, rec = run_episode(env, agent, 0, False, 0)
         tct += [r["tct_ms"] for r in rec]
@@ -112,15 +113,16 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--reward", choices=["qoe", "delay"], default="qoe")
     ap.add_argument("--gamma", type=float, default=None)
+    ap.add_argument("--arrival", choices=["open", "closed"], default="open")
     args = ap.parse_args()
-    global REWARD, GAMMA
-    REWARD, GAMMA = args.reward, args.gamma
+    global REWARD, GAMMA, ARRIVAL
+    REWARD, GAMMA, ARRIVAL = args.reward, args.gamma, args.arrival
     os.makedirs(args.out, exist_ok=True)
     np.random.seed(args.seed)
 
-    env = TestbedMEC(variant=args.variant, seed=args.seed)
+    env = TestbedMEC(variant=args.variant, seed=args.seed, arrival=args.arrival)
     agent = make_agent(env)
-    meta = {"variant": args.variant, "episodes": args.episodes, "seed": args.seed, "reward": args.reward,
+    meta = {"variant": args.variant, "episodes": args.episodes, "seed": args.seed, "reward": args.reward, "arrival": args.arrival,
             "gamma": GAMMA if GAMMA is not None else Config.REWARD_DECAY,
             "n_features": env.n_features, "n_lstm_state": env.n_lstm_state, "n_actions": env.n_actions,
             "n_time": env.n_time, "slot_ms": env.slot_ms, "max_delay_ms": env.max_delay_ms}

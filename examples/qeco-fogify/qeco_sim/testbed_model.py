@@ -2,20 +2,25 @@
 sim-vs-testbed comparison. Units: ms, KB, Mbit/s.
 
 Calibrated on Phase 1 (pinned cores, iter = 1M, RTT ~10 ms, 100Mbit, n = 30):
-  edge server compute (server_compute_ms) p50 67.7 ms on one E-core
-  edge server TCT p50 79.0 ms  -> overhead = 79.0 - 67.7 - 10.4 (ping) ~ 0.9 ms
-  edge server under 80% stress: compute 123.7 ms -> speed 67.7/123.7 = 0.547
+  edge server compute (server_compute_ms) p50 67.7 ms on one E-core (tasks back to back)
+  edge server under 80% stress: compute 123.7 ms
   local TCT (0.5 CPU quota): bimodal ~122 / ~177 ms (one or two CFS throttles)
+Updated in Phase 4.5 (closed loop, idle gap mean 200 ms, agent):
+  edge server compute p50 71.3 ms: after an idle gap the E-core is ~3.6 ms slower
+  than back to back (67.7). Phase 1's "overhead 0.9 ms" was RTT measured with ping;
+  with the RTT the agent observes (/probe), TCT - compute - RTT = 0.3..0.5 ms.
 """
 import math
 
 ITER_REF = 1_000_000
-EDGE_WORK_MS = 67.7          # CPU time of one iter=1M task on one E-core (edge server)
+EDGE_WORK_MS = 71.3          # CPU time of one iter=1M task on one E-core (edge server), after an idle gap
+EDGE_WORK_B2B_MS = 67.7      # same, tasks back to back (Phase 1); kept for reference
 LOCAL_WORK_MS = 70.0         # same task on the local node (fitted to the bimodal local TCT, see phase3 doc)
-EDGE_OVERHEAD_MS = 0.9       # HTTP + scheduling not covered by RTT / transfer / compute
+EDGE_OVERHEAD_MS = 0.4       # HTTP + scheduling not covered by RTT / transfer / compute (Phase 4.5; Phase 3: 0.9)
 LOCAL_QUOTA_MS, CFS_PERIOD_MS = 50.0, 100.0   # Docker --cpus 0.5 -> 50 ms per 100 ms period
 EDGE_CORES = 2               # edge server quota 2.0 CPU; one task uses one core
-STRESS_ALPHA = (1 - EDGE_WORK_MS / 123.7) / 0.8   # speed = 1 - alpha * load (fit at load 0.8)
+STRESS_COMPUTE_MS = 123.7    # compute under 80% stress (Phase 1); the core is busy, so no idle-gap effect
+STRESS_ALPHA = (1 - EDGE_WORK_MS / STRESS_COMPUTE_MS) / 0.8   # speed = 1 - alpha * load (fit at load 0.8)
 
 
 def edge_speed(load):

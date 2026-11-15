@@ -15,11 +15,19 @@ State (variant "orig", same layout as upstream):
 State (variant "net"): orig + [RTT_i / 100 ms] + [log10(B_i Mbit) / 2] + [L_i]
 LSTM input: "orig" = own active tasks per edge server (upstream edge_ue_m),
             "net"  = L_i (edge server CPU load).
+
+Task arrivals (arrival=...):
+  "open"   : Phase 3. A task arrives in each slot with probability arrive_prob,
+             independent of earlier tasks, so tasks overlap and queues build up.
+  "closed" : Phase 4.5. Like the Fogify driver: the next task arrives after the
+             previous one has finished plus an idle gap (arrivals.draw_gap_ms,
+             exponential, mean 200 ms). Queues are empty at every decision.
 """
 import math
 
 import numpy as np
 
+from arrivals import GAP_MEAN_MS, draw_gap_ms
 from testbed_model import (CFS_PERIOD_MS, EDGE_CORES, EDGE_OVERHEAD_MS, EDGE_WORK_MS, ITER_REF,
                            LOCAL_QUOTA_MS, LOCAL_WORK_MS, edge_speed)
 
@@ -34,8 +42,10 @@ PAYLOAD_CHOICES_KB = (1.0, 16.0, 64.0, 256.0)
 
 class TestbedMEC:
     def __init__(self, variant="orig", n_edge=2, slot_ms=10, n_slots=1000, max_delay_ms=3000,
-                 arrive_prob=0.03, change_prob=1 / 200, iter=ITER_REF, seed=None):
-        assert variant in ("orig", "net")
+                 arrive_prob=0.03, change_prob=1 / 200, iter=ITER_REF, seed=None,
+                 arrival="open", gap_mean_ms=GAP_MEAN_MS, max_tasks=None):
+        assert variant in ("orig", "net") and arrival in ("open", "closed")
+        self.arrival, self.gap_mean_ms, self.max_tasks = arrival, gap_mean_ms, max_tasks
         self.variant, self.n_edge = variant, n_edge
         self.slot_ms, self.n_slots = slot_ms, n_slots
         self.max_delay_ms = max_delay_ms
@@ -63,18 +73,26 @@ class TestbedMEC:
         self.cond[i][key] = self.sample_condition()[key]
 
     # ---------------------------------------------------------------- episode
-    def reset(self, conditions=None, payloads=None, arrivals=None):
+    def reset(self, conditions=None, payloads=None, arrivals=None, gap_seed=None):
         """conditions: list of dicts {rtt, bw, load} per edge server (fixed for the
         episode) or None for random, changing conditions. payloads / arrivals let an
-        evaluation replay the same task sequence for every policy."""
+        evaluation replay the same task sequence for every policy.
+        open loop : arrivals = bool per slot, payloads = KB per slot.
+        closed loop: arrivals is ignored, payloads = KB per task (index = task number),
+                     gap_seed = seed of the idle-gap sequence (None -> episode rng)."""
         self.fixed = conditions is not None
         self.cond = [dict(c) for c in conditions] if self.fixed else [self.sample_condition() for _ in range(self.n_edge)]
-        if arrivals is None:
-            arrivals = self.rng.random(self.n_slots) < self.arrive_prob
-        if payloads is None:
-            payloads = self.rng.choice(PAYLOAD_CHOICES_KB, size=self.n_slots)
         self.arrive_kb = np.zeros(self.n_time)
-        self.arrive_kb[:self.n_slots] = np.where(arrivals, payloads, 0.0)
+        self.n_arrived = 0
+        if self.arrival == "open":
+            if arrivals is None:
+                arrivals = self.rng.random(self.n_slots) < self.arrive_prob
+            if payloads is None:
+                payloads = self.rng.choice(PAYLOAD_CHOICES_KB, size=self.n_slots)
+            self.arrive_kb[:self.n_slots] = np.where(arrivals, payloads, 0.0)
+        else:
+            self.gap_rng = np.random.default_rng(gap_seed) if gap_seed is not None else self.rng
+            self.task_payloads = payloads
 
         self.time_count = 0
         self.now_ms = 0.0
@@ -89,7 +107,25 @@ class TestbedMEC:
         self.task_action = -np.ones(self.n_time)
         self.task_cond = [None] * self.n_time
         self.drop_count = 0
+        if self.arrival == "closed":
+            self._schedule_next(0.0)
         return self._observe()
+
+    def _schedule_next(self, t_ms):
+        """Closed loop: the next task arrives an idle gap after t_ms (end of the last task).
+        Tasks start at slot boundaries, so the gap is rounded up to the next slot."""
+        if self.max_tasks is not None and self.n_arrived >= self.max_tasks:
+            return
+        slot = max(int(math.ceil((t_ms + draw_gap_ms(self.gap_rng, self.gap_mean_ms)) / self.slot_ms)),
+                   self.time_count + 1 if t_ms > 0 else 0)
+        if slot >= self.n_slots:
+            return
+        if self.task_payloads is not None:
+            kb = float(self.task_payloads[self.n_arrived % len(self.task_payloads)])
+        else:
+            kb = float(self.rng.choice(PAYLOAD_CHOICES_KB))
+        self.arrive_kb[slot] = kb
+        self.n_arrived += 1
 
     def _task(self, slot, kb, action):
         work_scale = self.iter / ITER_REF
@@ -105,6 +141,8 @@ class TestbedMEC:
             unfinished = 0
         self.process_delay[task["slot"]] = delay
         self.unfinish_task[task["slot"]] = unfinished
+        if self.arrival == "closed":
+            self._schedule_next(task["t0"] + delay)
 
     # ---------------------------------------------------------------- physics
     def _period_pos(self, t):
@@ -187,6 +225,8 @@ class TestbedMEC:
         self.process_delay[task["slot"]] = self.max_delay_ms
         self.unfinish_task[task["slot"]] = 1
         self.drop_count += 1
+        if self.arrival == "closed":
+            self._schedule_next(task["t0"] + self.max_delay_ms)
 
     # ---------------------------------------------------------------- RL interface
     def step(self, action):
@@ -216,6 +256,9 @@ class TestbedMEC:
         self._maybe_change()
 
         done = self.time_count >= self.n_time
+        if (self.arrival == "closed" and self.max_tasks is not None and self.n_arrived >= self.max_tasks
+                and not self._busy() and not self.arrive_kb[self.time_count:].any()):
+            done = True   # closed loop with a task budget: stop once the last task is done
         if done:  # anything still running is unfinished (upstream does the same)
             for slot_i in np.where((self.arrive_kb > 0) & (self.process_delay == 0))[0]:
                 self.process_delay[slot_i] = self.max_delay_ms

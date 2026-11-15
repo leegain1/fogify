@@ -1,0 +1,181 @@
+method,target,round,tct_ms,server_compute_ms,tag
+uvc-client run (back to back),edge1,0,100.627,87.238,r1
+uvc-client run (back to back),edge1,0,100.899,90.246,r1
+uvc-client run (back to back),edge1,0,103.67,93.09,r1
+uvc-client run (back to back),edge1,0,103.847,93.304,r1
+uvc-client run (back to back),edge1,0,105.265,93.188,r1
+uvc-client run (back to back),edge1,0,107.45,96.863,r1
+uvc-client run (back to back),edge1,0,107.956,97.13,r1
+uvc-client run (back to back),edge1,0,107.624,96.836,r1
+uvc-client run (back to back),edge1,0,103.762,93.061,r1
+uvc-client run (back to back),edge1,0,103.848,93.07,r1
+uvc-client run (back to back),edge1,0,104.219,93.582,r1
+uvc-client run (back to back),edge1,0,103.536,92.688,r1
+uvc-client run (back to back),edge1,0,108.101,97.062,r1
+uvc-client run (back to back),edge1,0,106.574,95.652,r1
+uvc-client run (back to back),edge1,0,104.063,92.997,r1
+uvc-client run (back to back),edge1,0,103.682,92.926,r1
+uvc-client run (back to back),edge1,0,100.254,89.479,r1
+uvc-client run (back to back),edge1,0,96.043,85.223,r1
+uvc-client run (back to back),edge1,0,96.564,85.558,r1
+uvc-client run (back to back),edge1,0,91.913,80.984,r1
+uvc-client run (back to back),edge1,0,89.242,78.557,r1
+uvc-client run (back to back),edge1,0,89.455,78.865,r1
+uvc-client run (back to back),edge1,0,90.726,79.763,r1
+uvc-client run (back to back),edge1,0,91.716,80.343,r1
+uvc-client run (back to back),edge1,0,91.573,80.671,r1
+uvc-client run (back to back),edge1,0,89.452,78.499,r1
+uvc-client run (back to back),edge1,0,88.068,77.029,r1
+uvc-client run (back to back),edge1,0,85.191,74.427,r1
+uvc-client run (back to back),edge1,0,84.401,73.056,r1
+uvc-client run (back to back),edge1,0,83.122,72.003,r1
+agent (gap 200),edge1,0,83.874,72.153,r1
+agent (gap 200),edge1,0,83.771,72.066,r1
+agent (gap 200),edge1,0,82.353,71.065,r1
+agent (gap 200),edge1,0,86.673,73.023,r1
+agent (gap 200),edge1,0,78.475,67.841,r1
+agent (gap 200),edge1,0,83.62,71.982,r1
+agent (gap 200),edge1,0,86.08,74.729,r1
+agent (gap 200),edge1,0,81.41,70.928,r1
+agent (gap 200),edge1,0,84.368,73.4,r1
+agent (gap 200),edge1,0,82.229,71.407,r1
+agent (gap 200),edge1,0,82.524,71.772,r1
+agent (gap 200),edge1,0,83.877,71.859,r1
+agent (gap 200),edge1,0,82.913,71.526,r1
+agent (gap 200),edge1,0,83.26,71.748,r1
+agent (gap 200),edge1,0,82.989,72.105,r1
+agent (gap 200),edge1,0,83.971,72.826,r1
+agent (gap 200),edge1,0,80.497,69.208,r1
+agent (gap 200),edge1,0,82.987,71.751,r1
+agent (gap 200),edge1,0,82.886,71.583,r1
+agent (gap 200),edge1,0,82.152,71.678,r1
+agent (gap 200),edge1,0,82.614,71.582,r1
+agent (gap 200),edge1,0,83.254,71.402,r1
+agent (gap 200),edge1,0,82.983,72.078,r1
+agent (gap 200),edge1,0,83.194,71.66,r1
+agent (gap 200),edge1,0,82.56,71.023,r1
+agent (gap 200),edge1,0,81.127,70.392,r1
+agent (gap 200),edge1,0,79.252,68.226,r1
+agent (gap 200),edge1,0,80.536,69.714,r1
+agent (gap 200),edge1,0,79.92,68.914,r1
+agent (gap 200),edge1,0,83.048,71.795,r1
+agent (gap 200),local,0,121.853,,r1
+agent (gap 200),local,0,68.789,,r1
+agent (gap 200),local,0,97.35,,r1
+agent (gap 200),local,0,96.839,,r1
+agent (gap 200),local,0,115.965,,r1
+agent (gap 200),local,0,99.768,,r1
+agent (gap 200),local,0,87.39,,r1
+agent (gap 200),local,0,118.891,,r1
+agent (gap 200),local,0,126.478,,r1
+agent (gap 200),local,0,82.978,,r1
+agent (gap 200),local,0,77.342,,r1
+agent (gap 200),local,0,127.585,,r1
+agent (gap 200),local,0,81.566,,r1
+agent (gap 200),local,0,121.5,,r1
+agent (gap 200),local,0,95.009,,r1
+agent (gap 200),local,0,93.85,,r1
+agent (gap 200),local,0,108.624,,r1
+agent (gap 200),local,0,71.627,,r1
+agent (gap 200),local,0,70.982,,r1
+agent (gap 200),local,0,71.07,,r1
+agent (gap 200),local,0,104.941,,r1
+agent (gap 200),local,0,118.658,,r1
+agent (gap 200),local,0,111.467,,r1
+agent (gap 200),local,0,71.39,,r1
+agent (gap 200),local,0,121.511,,r1
+agent (gap 200),local,0,110.528,,r1
+agent (gap 200),local,0,89.236,,r1
+agent (gap 200),local,0,91.179,,r1
+agent (gap 200),local,0,75.6,,r1
+agent (gap 200),local,0,77.412,,r1
+uvc-client run (back to back),edge1,1,80.306,69.607,r1
+uvc-client run (back to back),edge1,1,78.479,67.651,r1
+uvc-client run (back to back),edge1,1,79.087,67.976,r1
+uvc-client run (back to back),edge1,1,78.859,67.67,r1
+uvc-client run (back to back),edge1,1,78.966,67.706,r1
+uvc-client run (back to back),edge1,1,78.74,67.738,r1
+uvc-client run (back to back),edge1,1,79.161,67.826,r1
+uvc-client run (back to back),edge1,1,78.688,67.582,r1
+uvc-client run (back to back),edge1,1,78.809,67.548,r1
+uvc-client run (back to back),edge1,1,80.891,69.606,r1
+uvc-client run (back to back),edge1,1,79.033,67.731,r1
+uvc-client run (back to back),edge1,1,78.992,67.607,r1
+uvc-client run (back to back),edge1,1,78.899,67.806,r1
+uvc-client run (back to back),edge1,1,78.731,67.88,r1
+uvc-client run (back to back),edge1,1,78.68,67.592,r1
+uvc-client run (back to back),edge1,1,78.807,67.583,r1
+uvc-client run (back to back),edge1,1,80.695,69.963,r1
+uvc-client run (back to back),edge1,1,82.474,71.811,r1
+uvc-client run (back to back),edge1,1,79.504,68.72,r1
+uvc-client run (back to back),edge1,1,78.912,68.237,r1
+uvc-client run (back to back),edge1,1,78.742,67.849,r1
+uvc-client run (back to back),edge1,1,78.63,67.557,r1
+uvc-client run (back to back),edge1,1,78.823,67.699,r1
+uvc-client run (back to back),edge1,1,78.71,67.688,r1
+uvc-client run (back to back),edge1,1,78.908,67.66,r1
+uvc-client run (back to back),edge1,1,78.612,67.66,r1
+uvc-client run (back to back),edge1,1,79.963,68.853,r1
+uvc-client run (back to back),edge1,1,78.929,67.696,r1
+uvc-client run (back to back),edge1,1,79.162,67.677,r1
+uvc-client run (back to back),edge1,1,78.814,67.659,r1
+agent (gap 200),edge1,1,82.522,71.218,r1
+agent (gap 200),edge1,1,83.759,72.561,r1
+agent (gap 200),edge1,1,84.325,73.274,r1
+agent (gap 200),edge1,1,82.36,71.2,r1
+agent (gap 200),edge1,1,83.805,72.547,r1
+agent (gap 200),edge1,1,84.638,72.927,r1
+agent (gap 200),edge1,1,83.262,71.57,r1
+agent (gap 200),edge1,1,81.168,69.882,r1
+agent (gap 200),edge1,1,79.455,68.624,r1
+agent (gap 200),edge1,1,83.116,71.36,r1
+agent (gap 200),edge1,1,85.72,74.863,r1
+agent (gap 200),edge1,1,84.142,72.869,r1
+agent (gap 200),edge1,1,83.501,71.984,r1
+agent (gap 200),edge1,1,80.701,70.129,r1
+agent (gap 200),edge1,1,78.98,67.931,r1
+agent (gap 200),edge1,1,82.068,70.837,r1
+agent (gap 200),edge1,1,79.848,68.968,r1
+agent (gap 200),edge1,1,83.113,71.305,r1
+agent (gap 200),edge1,1,84.405,72.994,r1
+agent (gap 200),edge1,1,80.713,69.517,r1
+agent (gap 200),edge1,1,82.635,71.473,r1
+agent (gap 200),edge1,1,79.58,67.919,r1
+agent (gap 200),edge1,1,86.558,75.525,r1
+agent (gap 200),edge1,1,82.762,71.423,r1
+agent (gap 200),edge1,1,79.112,68.073,r1
+agent (gap 200),edge1,1,82.416,71.036,r1
+agent (gap 200),edge1,1,79.564,68.719,r1
+agent (gap 200),edge1,1,82.652,71.079,r1
+agent (gap 200),edge1,1,83.506,72.318,r1
+agent (gap 200),edge1,1,80.079,69.473,r1
+agent (gap 200),local,1,124.026,,r1
+agent (gap 200),local,1,124.602,,r1
+agent (gap 200),local,1,125.877,,r1
+agent (gap 200),local,1,99.262,,r1
+agent (gap 200),local,1,124.401,,r1
+agent (gap 200),local,1,92.83,,r1
+agent (gap 200),local,1,86.389,,r1
+agent (gap 200),local,1,112.766,,r1
+agent (gap 200),local,1,121.712,,r1
+agent (gap 200),local,1,95.946,,r1
+agent (gap 200),local,1,77.733,,r1
+agent (gap 200),local,1,120.101,,r1
+agent (gap 200),local,1,78.633,,r1
+agent (gap 200),local,1,136.133,,r1
+agent (gap 200),local,1,94.079,,r1
+agent (gap 200),local,1,90.0,,r1
+agent (gap 200),local,1,108.503,,r1
+agent (gap 200),local,1,71.656,,r1
+agent (gap 200),local,1,71.058,,r1
+agent (gap 200),local,1,72.518,,r1
+agent (gap 200),local,1,106.026,,r1
+agent (gap 200),local,1,121.957,,r1
+agent (gap 200),local,1,99.504,,r1
+agent (gap 200),local,1,71.328,,r1
+agent (gap 200),local,1,127.419,,r1
+agent (gap 200),local,1,113.729,,r1
+agent (gap 200),local,1,89.567,,r1
+agent (gap 200),local,1,86.887,,r1
+agent (gap 200),local,1,74.825,,r1
+agent (gap 200),local,1,75.617,,r1

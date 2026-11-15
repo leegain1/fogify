@@ -4,6 +4,11 @@ sequence and CFS phase for every policy). A fixed 300 ms gap would lock the task
 start to one position in the 100 ms CFS period, so local TCT would depend on luck.
 
     docker run --rm -u 1000:1000 -v $PWD:/w -w /w/qeco_sim qeco-tf:0.1 python eval_sim.py
+    ... python eval_sim.py --arrival closed --out P45_eval_sim [run dirs ...]
+
+--arrival closed (Phase 4.5): tasks arrive like on the Fogify driver (next task an
+idle gap after the previous one ends); every policy runs N_TASKS tasks with the same
+gap sequence and Offline-Opt is the per-task minimum of the three fixed locations.
 """
 import os
 
@@ -18,7 +23,8 @@ from policies import RULES
 from qeco_agent import QecoPolicy
 
 RES = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "results")
-N_SLOTS, ARRIVE_PROB = 3000, 0.03   # 30 s episode, random arrivals (mean gap ~330 ms) -> ~90 tasks per condition
+N_SLOTS, ARRIVE_PROB = 3000, 0.03   # open loop: 30 s episode, random arrivals (mean gap ~330 ms) -> ~90 tasks
+N_TASKS = 90                        # closed loop: tasks per condition
 
 
 def grid():
@@ -31,9 +37,14 @@ def grid():
             yield "S3", f"E1 load {load}", kb, [{"rtt": 10, "bw": 100, "load": load}, {"rtt": 50, "bw": 100, "load": 0}]
 
 
-def run(variant, cond, kb, decide, qeco=None, seed=0):
-    env = TestbedMEC(variant=variant, n_slots=N_SLOTS, seed=seed)
-    obs, lstm = env.reset(conditions=cond, payloads=np.full(N_SLOTS, kb), arrivals=np.random.default_rng(seed + 123).random(N_SLOTS) < ARRIVE_PROB)
+def run(variant, cond, kb, decide, qeco=None, seed=0, arrival="open"):
+    if arrival == "open":
+        env = TestbedMEC(variant=variant, n_slots=N_SLOTS, seed=seed)
+        obs, lstm = env.reset(conditions=cond, payloads=np.full(N_SLOTS, kb),
+                              arrivals=np.random.default_rng(seed + 123).random(N_SLOTS) < ARRIVE_PROB)
+    else:
+        env = TestbedMEC(variant=variant, n_slots=N_TASKS * 400, seed=seed, arrival="closed", max_tasks=N_TASKS)
+        obs, lstm = env.reset(conditions=cond, payloads=[kb], gap_seed=seed + 123)
     if qeco:
         qeco.reset()
     done = False
@@ -50,45 +61,52 @@ def run(variant, cond, kb, decide, qeco=None, seed=0):
 
 
 def main():
-    import sys
-    # default: results/P3_orig, results/P3_net; or pass run dirs (variant read from meta.json)
-    dirs = sys.argv[1:] or [os.path.join(RES, f"P3_{v}") for v in ("orig", "net")]
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("dirs", nargs="*", help="run dirs (default results/P3_orig, P3_net); variant from meta.json")
+    ap.add_argument("--arrival", choices=["open", "closed"], default="open")
+    ap.add_argument("--out", default=None, help="output prefix in results/ (default: print only if dirs are given)")
+    args = ap.parse_args()
+    dirs = args.dirs or [os.path.join(RES, f"P3_{v}") for v in ("orig", "net")]
+    out = args.out or (None if args.dirs else "P3_eval_sim")
     models = {}
     for d in dirs:
         q = QecoPolicy(d)
-        models[f"QECO-{q.meta['variant']}" if not sys.argv[1:] else os.path.basename(d.rstrip("/"))] = (q.meta["variant"], q)
+        models[f"QECO-{q.meta['variant']}" if not args.dirs else os.path.basename(d.rstrip("/"))] = (q.meta["variant"], q)
     rows = []
     for scen, name, kb, cond in grid():
         per = {}
         for pol, fn in RULES.items():
-            per[pol] = run("orig", cond, kb, fn)
+            per[pol] = run("orig", cond, kb, fn, arrival=args.arrival)
         for pol, (v, q) in models.items():
-            per[pol] = run(v, cond, kb, None, q)
-        # Oracle: per task, the best of the three fixed locations (same arrivals and CFS phase)
+            per[pol] = run(v, cond, kb, None, q, arrival=args.arrival)
+        # Offline-Opt (사후 최적): per task, the best of the three fixed locations (same task sequence)
         fixed = np.vstack([per["Always-Local"][0], per["Always-Edge1"][0], per["Always-Edge2"][0]])
-        per["Oracle"] = (fixed.min(axis=0), fixed.argmin(axis=0))
+        per["Offline-Opt"] = (fixed.min(axis=0), fixed.argmin(axis=0))
         for pol, (tct, act) in per.items():
             rows.append({"scenario": scen, "condition": name, "payload_kb": kb, "policy": pol,
                          "tct_p50": np.median(tct), "tct_p95": np.percentile(tct, 95), "tct_mean": tct.mean(),
-                         "regret_mean": tct.mean() - per["Oracle"][0].mean(),
+                         "regret_mean": tct.mean() - per["Offline-Opt"][0].mean(),
                          "share_local": (act == 0).mean(), "share_e1": (act == 1).mean(), "share_e2": (act == 2).mean()})
     df = pd.DataFrame(rows).round(2)
-    if sys.argv[1:]:
+    if out is None:
         print(df.groupby(["payload_kb", "policy"])[["tct_mean", "regret_mean"]].mean().round(1).unstack(0).to_string())
-        return
-    df.to_csv(os.path.join(RES, "P3_eval_sim.csv"), index=False)
+        return df
+    df.to_csv(os.path.join(RES, f"{out}.csv"), index=False)
 
     summary = df.groupby(["payload_kb", "policy"])[["tct_mean", "regret_mean"]].mean().round(1).unstack(0)
     print(summary.to_string())
-    summary.to_csv(os.path.join(RES, "P3_eval_sim_summary.csv"))
+    summary.to_csv(os.path.join(RES, f"{out}_summary.csv"))
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4), sharey=True)
     for ax, kb in zip(axes, (1.0, 256.0)):
         piv = df[df.payload_kb == kb].pivot_table(index="policy", values="regret_mean", aggfunc="mean").sort_values("regret_mean")
         piv.plot.barh(ax=ax, legend=False)
-        ax.set_title(f"payload {kb:.0f} KB"); ax.set_xlabel("mean regret vs Oracle (ms), S1-S3 avg"); ax.grid(axis="x", alpha=0.3)
-    fig.suptitle("Simulator evaluation (fixed conditions, random arrivals ~1 task / 330 ms)")
-    plt.tight_layout(); plt.savefig(os.path.join(RES, "P3_eval_sim.png"), dpi=110)
+        ax.set_title(f"payload {kb:.0f} KB"); ax.set_xlabel("mean regret vs Offline-Opt (ms), S1-S3 avg"); ax.grid(axis="x", alpha=0.3)
+    fig.suptitle("Simulator evaluation (fixed conditions, " + ("random arrivals ~1 task / 330 ms)" if args.arrival == "open"
+                 else f"closed loop, idle gap mean 200 ms, {N_TASKS} tasks)"))
+    plt.tight_layout(); plt.savefig(os.path.join(RES, f"{out}.png"), dpi=110)
+    return df
 
 
 if __name__ == "__main__":

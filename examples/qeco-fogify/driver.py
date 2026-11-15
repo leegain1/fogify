@@ -23,6 +23,7 @@ import pandas as pd
 import testbed as tb
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "qeco_sim"))
+from arrivals import GAP_MEAN_MS, gap_sequence_ms   # noqa: E402
 from policies import RULES, model_greedy_estimates   # noqa: E402
 from testbed_model import edge_tct_ms, local_tct_fluid_ms   # noqa: E402
 
@@ -32,7 +33,13 @@ EDGES = ["edge-server-1", "edge-server-2"]
 TARGETS = ["local", "edge1", "edge2"]
 EDGE_CORES = 2.0
 SLOT_MS = 10
-POLICY_NAMES = list(RULES) + ["QECO-orig", "QECO-net", "Oracle"]
+# Policies that run on the testbed. Offline-Opt (paper: 사후 최적) is not run: it is computed
+# per task from the separate Always-Local / Always-Edge1 / Always-Edge2 runs (offline_opt()).
+# "Offline-Opt-seq" is the Phase 4 method (local, edge1, edge2 back to back for each task),
+# kept only for the Phase 4.5 comparison: the idle time during the two edge runs refills
+# the local CFS quota, so its local TCT is better than any real policy can get.
+POLICY_NAMES = list(RULES) + ["QECO-orig", "QECO-net"]
+FIXED = ["Always-Local", "Always-Edge1", "Always-Edge2"]
 
 
 def _http(url, data=None, timeout=60):
@@ -171,11 +178,12 @@ def predicted_tct(action, cond, iter, kb):
     return edge_tct_ms(iter, kb, c["rtt"], c["bw"], c["load"])
 
 
-def run_policy(bed, policy, n=30, iter=1_000_000, payload_kb=1, gap_mean_ms=200, seed=0, label="", warmup=1):
-    """Run n tasks with one policy. Gaps between tasks are exponential (same sequence
-    for every policy with the same seed). Returns one row per task."""
-    rng = np.random.default_rng(seed)
-    gaps = rng.exponential(gap_mean_ms, size=n + warmup) / 1000
+def run_policy(bed, policy, n=30, iter=1_000_000, payload_kb=1, gap_mean_ms=GAP_MEAN_MS, seed=0, label="", warmup=1):
+    """Run n tasks with one policy, closed loop: each task starts an idle gap after the
+    previous one ended (arrivals.gap_sequence_ms, same sequence for every policy with the
+    same seed). TCT is measured in the agent, so decide_ms is not part of tct_ms.
+    Returns one row per task."""
+    gaps = gap_sequence_ms(seed, n + warmup, gap_mean_ms) / 1000
     qeco = QecoClient(policy.split("-")[1]) if policy.startswith("QECO") else None
     if qeco:
         qeco.reset()
@@ -185,7 +193,7 @@ def run_policy(bed, policy, n=30, iter=1_000_000, payload_kb=1, gap_mean_ms=200,
         cond = bed.cond()
         q = None
         t_dec = time.time()
-        if policy == "Oracle":
+        if policy == "Offline-Opt-seq":
             res = [bed.run(t, iter, payload_kb * 1024) for t in TARGETS]
             tcts = [r["tct_ms"] if r["status"] == "ok" else math.inf for r in res]
             action = int(np.argmin(tcts))
@@ -205,7 +213,7 @@ def run_policy(bed, policy, n=30, iter=1_000_000, payload_kb=1, gap_mean_ms=200,
                      "iter": iter, "payload_kb": payload_kb, "gap_ms": round(gaps[k] * 1000, 1),
                      "action": action, "target": TARGETS[action], "tct_ms": r["tct_ms"],
                      "server_compute_ms": r.get("server_compute_ms"), "status": r["status"],
-                     "decide_ms": round((time.time() - t_dec) * 1000 - r["tct_ms"], 1) if policy != "Oracle" else None,
+                     "decide_ms": round((time.time() - t_dec) * 1000 - r["tct_ms"], 1) if policy != "Offline-Opt-seq" else None,
                      "pred_tct_ms": round(predicted_tct(action, cond, iter, payload_kb), 1),
                      "est_local_ms": round(est[0], 1), "est_e1_ms": round(est[1], 1), "est_e2_ms": round(est[2], 1),
                      "q": json.dumps(q) if q else "",
@@ -214,3 +222,32 @@ def run_policy(bed, policy, n=30, iter=1_000_000, payload_kb=1, gap_mean_ms=200,
                      **{f"obs_load{i + 1}": round(c["load"], 3) for i, c in enumerate(cond)},
                      **extra})
     return pd.DataFrame(rows)
+
+
+def offline_opt(df):
+    """Offline-Opt (사후 최적): for every task, the smallest TCT of the separate
+    Always-Local / Always-Edge1 / Always-Edge2 runs (same label, matched by task number;
+    same seed -> same gap sequence). Returns rows in the run_policy format."""
+    out = []
+    for label, d in df[df.policy.isin(FIXED)].groupby("label"):
+        piv = {p: g.set_index("task") for p, g in d.groupby("policy")}
+        if set(piv) != set(FIXED):
+            continue
+        tasks = sorted(set.intersection(*(set(g.index) for g in piv.values())))
+        for k in tasks:
+            rows = [piv[p].loc[k] for p in FIXED]
+            tcts = [r.tct_ms if r.status == "ok" else math.inf for r in rows]
+            a = int(np.argmin(tcts))
+            r = rows[a].to_dict()
+            r.update({"policy": "Offline-Opt", "task": k, "action": a, "target": TARGETS[a], "decide_ms": None,
+                      "q": "", **{f"tct_{t}": v for t, v in zip(TARGETS, tcts)}})
+            out.append(r)
+    return pd.DataFrame(out)
+
+
+def summarize(df):
+    ok = df[df.status == "ok"]
+    return ok.groupby(["label", "policy"] if "label" in ok else "policy").agg(
+        p50=("tct_ms", "median"), p95=("tct_ms", lambda x: x.quantile(0.95)), mean=("tct_ms", "mean"),
+        n=("tct_ms", "size"), local=("action", lambda a: (a == 0).mean()), e1=("action", lambda a: (a == 1).mean()),
+        e2=("action", lambda a: (a == 2).mean()), decide_ms=("decide_ms", "median")).round(2)

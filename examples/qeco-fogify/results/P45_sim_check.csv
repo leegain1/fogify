@@ -1,0 +1,5 @@
+policy,testbed_mean,testbed_p50,testbed_p95,sim_closed_mean,sim_closed_p50,sim_closed_p95,sim_open_mean,sim_open_p95
+Always-Edge1,82.2,82.7,84.4,81.9,82.0,82.0,82.5,88.9
+Always-Edge2,82.4,82.7,84.4,81.9,82.0,82.0,82.5,88.9
+Always-Local,102.6,106.6,138.3,95.8,93.6,126.4,135.1,281.2
+Offline-Opt,78.8,80.4,83.0,78.2,81.9,82.0,80.1,83.7

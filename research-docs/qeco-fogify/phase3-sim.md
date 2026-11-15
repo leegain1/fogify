@@ -65,7 +65,7 @@ CPU 할당량(CFS)은 "100 ms마다 50 ms까지 실행"이다. 그래서 작업 
 **보상: 원본 QoE → 지연만**
 - 에너지 상태를 1로 두면 원본 QoE는 `4·최대지연 − 2·지연`이 된다.
 - 이때 로컬과 엣지 서버의 보상 차이는 약 1점인데, Q값은 약 1200이다. 차이가 너무 작아서 두 버전 모두 "항상 로컬"로 굳었다.
-- 300 에피소드로 짧게 비교 학습했다 (QECO-net, 시뮬레이터 평가에서 Oracle 대비 평균 손해 ms, 1KB / 256KB).
+- 300 에피소드로 짧게 비교 학습했다 (QECO-net, 시뮬레이터 평가에서 Offline-Opt 대비 평균 손해 ms, 1KB / 256KB).
 
   | 보상 | γ | 손해 1KB | 손해 256KB |
   |---|---|---|---|
@@ -93,7 +93,7 @@ CPU 할당량(CFS)은 "100 ms마다 50 ms까지 실행"이다. 그래서 작업 
 
 **payload 1 KB**
 
-| 조건 | Always-Local | Nearest-Edge | Model-Greedy | QECO-orig | QECO-net | Oracle |
+| 조건 | Always-Local | Nearest-Edge | Model-Greedy | QECO-orig | QECO-net | Offline-Opt |
 |---|---|---|---|---|---|---|
 | RTT 10 | 129 | 79 | **79** | 118 | 93 | 77 |
 | RTT 30 | 129 | 99 | 99 | 119 | **97** | 91 |
@@ -104,7 +104,7 @@ CPU 할당량(CFS)은 "100 ms마다 50 ms까지 실행"이다. 그래서 작업 
 | Edge1 부하 0.6 (Edge2 RTT 50) | 129 | 114 | 114 | 120 | **103** | 99 |
 | Edge1 부하 0.8 (Edge2 RTT 50) | 129 | 136 | 119 | 121 | **107** | 102 |
 
-**전체 평균** (Oracle 대비 손해)
+**전체 평균** (Offline-Opt 대비 손해)
 
 | 정책 | 1 KB | 256 KB |
 |---|---|---|
@@ -113,7 +113,7 @@ CPU 할당량(CFS)은 "100 ms마다 50 ms까지 실행"이다. 그래서 작업 
 | Model-Greedy | **100.5 (+7.2)** | **120.5 (+11.5)** |
 | QECO-orig | 119.8 (+26.5) | 127.9 (+18.9) |
 | QECO-net | 102.0 (+8.7) | 140.1 (+31.1) |
-| Oracle | 93.3 | 109.0 |
+| Offline-Opt | 93.3 | 109.0 |
 
 ![P3 eval](../../examples/qeco-fogify/results/P3_eval_sim.png)
 
