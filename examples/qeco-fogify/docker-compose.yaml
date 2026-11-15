@@ -5,7 +5,8 @@
 #
 # CPU: Fogify sets a Docker CPU quota of cores * clock_speed / CPU_FREQ (.env: 2086),
 #      rounded to 1 decimal place.
-#        local        : 1 core  x 1043 MHz -> 0.5 CPU
+#        local        : 1 core  x  417 MHz -> 0.2 CPU  (Phase 3.5: edge server ~5x faster than local,
+#                       like a phone / IoT device vs a server; Phase 1-4.5 used 1043 MHz -> 0.5 CPU)
 #        edge server  : 2 cores x 2086 MHz -> 2.0 CPU
 # Network: QoS is applied on each node's interface for that network.
 #          Measured: RTT = delay on local side + delay on edge server side
@@ -29,7 +30,7 @@ x-fogify:
     capabilities:
       processor:
         cores: 1
-        clock_speed: 1043
+        clock_speed: 417
       memory: 0.5G
   - name: edge-server-node
     capabilities:

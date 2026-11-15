@@ -21,7 +21,9 @@ EDGE_WORK_MS = 72.1          # CPU time of one iter=1M task on one E-core (edge 
 # before fixing the CPU: 67.7 back to back, 71.3 after an idle gap, 80-90 in slow periods
 LOCAL_WORK_MS = 70.0         # same task on the local node (fitted to the bimodal local TCT, see phase3 doc)
 EDGE_OVERHEAD_MS = 0.15      # HTTP + scheduling not covered by RTT / transfer / compute (Phase 4.5; Phase 3: 0.9)
-LOCAL_QUOTA_MS, CFS_PERIOD_MS = 50.0, 100.0   # Docker --cpus 0.5 -> 50 ms per 100 ms period
+# Docker --cpus 0.2 -> 20 ms per 100 ms period (Phase 3.5: edge server ~5x faster than local;
+# Phase 1-4.5: --cpus 0.5 -> 50 ms, edge server only ~1.3x faster)
+LOCAL_QUOTA_MS, CFS_PERIOD_MS = 20.0, 100.0
 EDGE_CORES = 2               # edge server quota 2.0 CPU; one task uses one core
 STRESS_COMPUTE_MS = 124.4    # compute under 80% stress (Phase 4.5, CPU fixed; Phase 1: 123.7)
 STRESS_ALPHA = (1 - EDGE_WORK_MS / STRESS_COMPUTE_MS) / 0.8   # speed = 1 - alpha * load (fit at load 0.8)

@@ -25,6 +25,7 @@ import testbed as tb
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "qeco_sim"))
 from arrivals import GAP_MEAN_MS, gap_sequence_ms   # noqa: E402
 from policies import RULES, model_greedy_estimates   # noqa: E402
+from mec_env import local_features                     # noqa: E402
 from testbed_model import edge_tct_ms, local_tct_fluid_ms   # noqa: E402
 
 CONTROL_NET = "fogemulator_default"      # ui, controller, cAdvisor and (after connect) the local node
@@ -39,6 +40,7 @@ SLOT_MS = 10
 # kept only for the Phase 4.5 comparison: the idle time during the two edge runs refills
 # the local CFS quota, so its local TCT is better than any real policy can get.
 POLICY_NAMES = list(RULES) + ["QECO-orig", "QECO-net"]
+QECO_MODELS = {}   # set by start_policy_server()
 FIXED = ["Always-Local", "Always-Edge1", "Always-Edge2"]
 
 
@@ -55,14 +57,20 @@ def _ip(container, net=CONTROL_NET):
                            container], capture_output=True, text=True, check=True).stdout.strip()
 
 
-def start_policy_server():
+def start_policy_server(models=None):
+    """models: {policy name: (variant, run dir in results/)}; default = Phase 3 models."""
+    global QECO_MODELS
+    QECO_MODELS = models or {"QECO-orig": ("orig", "P3_orig"), "QECO-net": ("net", "P3_net")}
+    spec = ",".join(f"{n}={d}" for n, (v, d) in QECO_MODELS.items())
     subprocess.run(["docker", "rm", "-f", "qeco-policy"], capture_output=True)
     subprocess.run(["docker", "run", "-d", "--name", "qeco-policy", "--network", CONTROL_NET, "-u", "1000:1000",
+                    "-e", f"QECO_MODELS={spec}",
                     "-v", f"{HOST_DIR}:/w", "-w", "/w/qeco_sim", "qeco-tf:0.1", "python", "policy_server.py"],
                    check=True, capture_output=True)
+    first = next(iter(QECO_MODELS))
     for _ in range(60):
         try:
-            _http("http://qeco-policy:8090/reset", {"variant": "net"}, timeout=2)
+            _http("http://qeco-policy:8090/reset", {"model": first}, timeout=2)
             return
         except Exception:
             time.sleep(1)
@@ -77,6 +85,7 @@ class Testbed:
         self.bw = {e: 100.0 for e in EDGES}
         self.own = {e: [] for e in EDGES}       # (end_ts_s, compute_ms) of our tasks per edge server
         self.obs = {"rtt": {e: 10.0 for e in EDGES}, "load": {e: 0.0 for e in EDGES}}
+        self.last_local_end, self.last_local_tct = 0.0, 0.0    # for QECO-net+ (time.time(), ms)
         self._stop = threading.Event()
 
     def up(self):
@@ -109,6 +118,8 @@ class Testbed:
 
     def run(self, target, iter, payload):
         r = _http(f"{self.agent}/run?target={target}&iter={iter}&payload={payload}", b"")
+        if target == "local" and r.get("status") == "ok":
+            self.last_local_end, self.last_local_tct = time.time(), r["tct_ms"]
         if target != "local" and "server_compute_ms" in r:
             self.own[EDGES[TARGETS.index(target) - 1]].append((time.time(), r["server_compute_ms"]))
         return r
@@ -147,25 +158,29 @@ class QecoClient:
 
     SIZE_UNIT_KB = 64.0
 
-    def __init__(self, variant):
-        self.variant = variant
+    def __init__(self, name, variant):
+        self.name, self.variant = name, variant
         self.last = None
 
     def reset(self):
-        _http("http://qeco-policy:8090/reset", {"variant": self.variant})
+        _http("http://qeco-policy:8090/reset", {"model": self.name})
         self.last = None
 
-    def decide(self, cond, kb):
+    def decide(self, cond, kb, bed=None):
         obs = [kb / self.SIZE_UNIT_KB, 0.0, 0.0, 0.0, 0.0, 1.0]
-        if self.variant == "net":
+        if self.variant != "orig":
             obs += [c["rtt"] / 100.0 for c in cond] + [math.log10(c["bw"]) / 2.0 for c in cond] + [c["load"] for c in cond]
+        if self.variant == "netplus":   # time since the last local task ended, its TCT (driver knows both)
+            since = (time.time() - bed.last_local_end) * 1000 if bed.last_local_end else 1e9
+            obs += local_features(since, bed.last_local_tct)
+        if self.variant != "orig":
             lstm_now = [c["load"] for c in cond]
         else:
             lstm_now = [0.0, 0.0]          # own active tasks per edge server (none between tasks)
         now = time.time()
         k = 10 if self.last is None else int(np.clip(round((now - self.last) * 1000 / SLOT_MS), 1, 10))
         self.last = now
-        r = _http("http://qeco-policy:8090/act", {"variant": self.variant, "obs": obs, "lstm": [lstm_now] * k})
+        r = _http("http://qeco-policy:8090/act", {"model": self.name, "obs": obs, "lstm": [lstm_now] * k})
         return r["action"], r["q"]
 
 
@@ -184,7 +199,7 @@ def run_policy(bed, policy, n=30, iter=1_000_000, payload_kb=1, gap_mean_ms=GAP_
     same seed). TCT is measured in the agent, so decide_ms is not part of tct_ms.
     Returns one row per task."""
     gaps = gap_sequence_ms(seed, n + warmup, gap_mean_ms) / 1000
-    qeco = QecoClient(policy.split("-")[1]) if policy.startswith("QECO") else None
+    qeco = QecoClient(policy, QECO_MODELS[policy][0]) if policy.startswith("QECO") else None
     if qeco:
         qeco.reset()
     rows = []
@@ -201,7 +216,7 @@ def run_policy(bed, policy, n=30, iter=1_000_000, payload_kb=1, gap_mean_ms=GAP_
             extra = {f"tct_{t}": v for t, v in zip(TARGETS, tcts)}
         else:
             if qeco:
-                action, q = qeco.decide(cond, payload_kb)
+                action, q = qeco.decide(cond, payload_kb, bed)
             else:
                 action = RULES[policy](cond, iter, payload_kb)
             r = bed.run(TARGETS[action], iter, payload_kb * 1024)

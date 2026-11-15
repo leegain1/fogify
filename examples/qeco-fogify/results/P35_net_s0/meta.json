@@ -1,0 +1,23 @@
+{
+ "variant": "net",
+ "episodes": 1000,
+ "seed": 0,
+ "reward": "delay",
+ "arrival": "closed",
+ "payload_probs": [
+  0.2,
+  0.2,
+  0.3,
+  0.3
+ ],
+ "rtt_dist": "log",
+ "gamma": 0.0,
+ "n_features": 12,
+ "n_lstm_state": 2,
+ "n_actions": 3,
+ "n_time": 1300,
+ "slot_ms": 10,
+ "max_delay_ms": 3000,
+ "best_episode": 424,
+ "best_val_tct_ms": 160.57
+}

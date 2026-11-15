@@ -13,8 +13,12 @@ Actions: 0 = local, 1 = edge-server-1, 2 = edge-server-2 (same as upstream).
 State (variant "orig", same layout as upstream):
   [task size, local queue (slots), transmit queue (slots), edge backlog x n_edge, energy state = 1]
 State (variant "net"): orig + [RTT_i / 100 ms] + [log10(B_i Mbit) / 2] + [L_i]
+State (variant "netplus", Phase 3.5): net + local CPU state, both observable on the testbed
+  [time since the last local task ended / 1000 ms (clipped to 1), TCT of that task / 200 ms]
+  With closed-loop arrivals the local queue is always empty, so whether a local task takes
+  ~70 ms or 120+ ms depends only on the CFS quota/period state, which these two values hint at.
 LSTM input: "orig" = own active tasks per edge server (upstream edge_ue_m),
-            "net"  = L_i (edge server CPU load).
+            "net", "netplus" = L_i (edge server CPU load).
 
 Task arrivals (arrival=...):
   "open"   : Phase 3. A task arrives in each slot with probability arrive_prob,
@@ -34,17 +38,28 @@ from testbed_model import (CFS_PERIOD_MS, EDGE_CORES, EDGE_OVERHEAD_MS, EDGE_WOR
 SIZE_UNIT_KB = 64.0  # task size feature = payload / 64 KB (1 KB .. 256 KB -> 0.016 .. 4, upstream sizes are 1..7)
 
 # Ranges for domain randomization (cover Phase 5 scenarios S1-S4)
-RTT_RANGE_MS = (10.0, 250.0)
+RTT_RANGE_MS = (10.0, 250.0)          # Phase 3: uniform
+RTT_LOG_RANGE_MS = (5.0, 250.0)       # Phase 3.5: log-uniform (rtt_dist="log")
 BW_CHOICES_MBIT = (1.0, 3.0, 10.0, 30.0, 100.0)
 LOAD_RANGE = (0.0, 0.9)
 PAYLOAD_CHOICES_KB = (1.0, 16.0, 64.0, 256.0)
+PAYLOAD_PROBS = (0.25, 0.25, 0.25, 0.25)   # Phase 3; Phase 3.5 trains with more large tasks (--payload-probs)
+LOCAL_SINCE_CAP_MS, LOCAL_TCT_UNIT_MS = 1000.0, 200.0
+
+
+def local_features(since_ms, last_tct_ms):
+    """QECO-net+ local CPU features (same function in the Fogify driver)."""
+    return [min(max(since_ms, 0.0), LOCAL_SINCE_CAP_MS) / LOCAL_SINCE_CAP_MS, last_tct_ms / LOCAL_TCT_UNIT_MS]
 
 
 class TestbedMEC:
     def __init__(self, variant="orig", n_edge=2, slot_ms=10, n_slots=1000, max_delay_ms=3000,
                  arrive_prob=0.03, change_prob=1 / 200, iter=ITER_REF, seed=None,
-                 arrival="open", gap_mean_ms=GAP_MEAN_MS, max_tasks=None):
-        assert variant in ("orig", "net") and arrival in ("open", "closed")
+                 arrival="open", gap_mean_ms=GAP_MEAN_MS, max_tasks=None, payload_probs=PAYLOAD_PROBS,
+                 rtt_dist="uniform"):
+        assert variant in ("orig", "net", "netplus") and arrival in ("open", "closed")
+        self.rtt_dist = rtt_dist
+        self.payload_probs = np.asarray(payload_probs, dtype=float) / np.sum(payload_probs)
         self.arrival, self.gap_mean_ms, self.max_tasks = arrival, gap_mean_ms, max_tasks
         self.variant, self.n_edge = variant, n_edge
         self.slot_ms, self.n_slots = slot_ms, n_slots
@@ -55,13 +70,17 @@ class TestbedMEC:
         self.rng = np.random.default_rng(seed)
 
         self.n_actions = 1 + n_edge
-        self.n_features = 4 + n_edge + (3 * n_edge if variant == "net" else 0)
+        self.n_features = 4 + n_edge + (3 * n_edge if variant != "orig" else 0) + (2 if variant == "netplus" else 0)
         self.n_lstm_state = n_edge
 
     # ---------------------------------------------------------------- conditions
     def sample_condition(self):
         load = 0.0 if self.rng.random() < 0.4 else self.rng.uniform(*LOAD_RANGE)
-        return {"rtt": float(self.rng.uniform(*RTT_RANGE_MS)),
+        if self.rtt_dist == "log":   # Phase 3.5: log-uniform, ~40% of draws below 24 ms (edge server can win)
+            rtt = float(np.exp(self.rng.uniform(np.log(RTT_LOG_RANGE_MS[0]), np.log(RTT_LOG_RANGE_MS[1]))))
+        else:
+            rtt = float(self.rng.uniform(*RTT_RANGE_MS))
+        return {"rtt": rtt,
                 "bw": float(self.rng.choice(BW_CHOICES_MBIT)),
                 "load": float(load)}
 
@@ -88,7 +107,7 @@ class TestbedMEC:
             if arrivals is None:
                 arrivals = self.rng.random(self.n_slots) < self.arrive_prob
             if payloads is None:
-                payloads = self.rng.choice(PAYLOAD_CHOICES_KB, size=self.n_slots)
+                payloads = self.rng.choice(PAYLOAD_CHOICES_KB, size=self.n_slots, p=self.payload_probs)
             self.arrive_kb[:self.n_slots] = np.where(arrivals, payloads, 0.0)
         else:
             self.gap_rng = np.random.default_rng(gap_seed) if gap_seed is not None else self.rng
@@ -107,6 +126,7 @@ class TestbedMEC:
         self.task_action = -np.ones(self.n_time)
         self.task_cond = [None] * self.n_time
         self.drop_count = 0
+        self.last_local_end_ms, self.last_local_tct_ms = -LOCAL_SINCE_CAP_MS, 0.0
         if self.arrival == "closed":
             self._schedule_next(0.0)
         return self._observe()
@@ -123,7 +143,7 @@ class TestbedMEC:
         if self.task_payloads is not None:
             kb = float(self.task_payloads[self.n_arrived % len(self.task_payloads)])
         else:
-            kb = float(self.rng.choice(PAYLOAD_CHOICES_KB))
+            kb = float(self.rng.choice(PAYLOAD_CHOICES_KB, p=self.payload_probs))
         self.arrive_kb[slot] = kb
         self.n_arrived += 1
 
@@ -141,6 +161,8 @@ class TestbedMEC:
             unfinished = 0
         self.process_delay[task["slot"]] = delay
         self.unfinish_task[task["slot"]] = unfinished
+        if task["action"] == 0:
+            self.last_local_end_ms, self.last_local_tct_ms = task["t0"] + delay, delay
         if self.arrival == "closed":
             self._schedule_next(task["t0"] + delay)
 
@@ -267,7 +289,7 @@ class TestbedMEC:
         return obs, lstm, done
 
     def _lstm(self):
-        if self.variant == "net":
+        if self.variant != "orig":
             return np.array([c["load"] for c in self.cond])
         own = np.zeros(self.n_edge)
         for i, active in enumerate(self.edge_active):
@@ -291,8 +313,10 @@ class TestbedMEC:
         for t in self.tx_q:
             backlog[t["edge"]] += t["edge_work"]
         obs = [kb / SIZE_UNIT_KB, local_wait, tx_wait, *(backlog / self.slot_ms), 1.0]
-        if self.variant == "net":
+        if self.variant != "orig":
             obs += [c["rtt"] / 100.0 for c in self.cond]
             obs += [math.log10(c["bw"]) / 2.0 for c in self.cond]
             obs += [c["load"] for c in self.cond]
+        if self.variant == "netplus":
+            obs += local_features(self.time_count * self.slot_ms - self.last_local_end_ms, self.last_local_tct_ms)
         return np.array(obs, dtype=float), lstm

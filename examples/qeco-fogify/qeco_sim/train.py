@@ -30,6 +30,7 @@ DELAY_UNIT_MS = 100.0   # QoE uses delay in upstream slot units (0.1 s) so the r
 
 REWARD = "qoe"   # set from --reward
 ARRIVAL = "open"  # set from --arrival (Phase 3 models: open)
+ENV_KW = {}       # extra TestbedMEC arguments (payload_probs)
 
 
 def reward(env, slot):
@@ -96,7 +97,7 @@ def validate(variant, agent):
     agent.epsilon = 1.0
     tct = []
     for k in range(VAL_EPISODES):
-        env = TestbedMEC(variant=variant, seed=VAL_SEED + k, arrival=ARRIVAL)
+        env = TestbedMEC(variant=variant, seed=VAL_SEED + k, arrival=ARRIVAL, **ENV_KW)
         agent.lstm_history.extend([np.zeros(agent.n_lstm_state)] * agent.n_lstm_step)
         _, rec = run_episode(env, agent, 0, False, 0)
         tct += [r["tct_ms"] for r in rec]
@@ -107,22 +108,30 @@ def validate(variant, agent):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--variant", choices=["orig", "net"], required=True)
+    ap.add_argument("--variant", choices=["orig", "net", "netplus"], required=True)
     ap.add_argument("--episodes", type=int, default=1000)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", required=True)
     ap.add_argument("--reward", choices=["qoe", "delay"], default="qoe")
     ap.add_argument("--gamma", type=float, default=None)
     ap.add_argument("--arrival", choices=["open", "closed"], default="open")
+    ap.add_argument("--payload-probs", type=float, nargs=4, default=None,
+                    help="probabilities of 1/16/64/256 KB tasks (default 0.25 each)")
+    ap.add_argument("--rtt-dist", choices=["uniform", "log"], default="uniform")
     args = ap.parse_args()
     global REWARD, GAMMA, ARRIVAL
     REWARD, GAMMA, ARRIVAL = args.reward, args.gamma, args.arrival
+    global ENV_KW
+    if args.payload_probs:
+        ENV_KW["payload_probs"] = args.payload_probs
+    ENV_KW["rtt_dist"] = args.rtt_dist
     os.makedirs(args.out, exist_ok=True)
     np.random.seed(args.seed)
 
-    env = TestbedMEC(variant=args.variant, seed=args.seed, arrival=args.arrival)
+    env = TestbedMEC(variant=args.variant, seed=args.seed, arrival=args.arrival, **ENV_KW)
     agent = make_agent(env)
     meta = {"variant": args.variant, "episodes": args.episodes, "seed": args.seed, "reward": args.reward, "arrival": args.arrival,
+            "payload_probs": list(env.payload_probs), "rtt_dist": args.rtt_dist,
             "gamma": GAMMA if GAMMA is not None else Config.REWARD_DECAY,
             "n_features": env.n_features, "n_lstm_state": env.n_lstm_state, "n_actions": env.n_actions,
             "n_time": env.n_time, "slot_ms": env.slot_ms, "max_delay_ms": env.max_delay_ms}

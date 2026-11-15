@@ -1,0 +1,23 @@
+policy,payload_kb,regret_mean,regret_std,mid_mean,mid_std,n_seeds,one_action_seeds
+Always-Edge1,1.0,2.0,,0.0,,1,1
+Always-Edge1,256.0,163.0,,0.0,,1,1
+Always-Edge2,1.0,7.1,,0.0,,1,1
+Always-Edge2,256.0,168.0,,0.0,,1,1
+Always-Local,1.0,160.8,,127.7,,1,1
+Always-Local,256.0,113.4,,106.7,,1,1
+Model-Greedy,1.0,1.0,,0.0,,1,0
+Model-Greedy,256.0,3.6,,0.0,,1,0
+Nearest-Edge,1.0,2.0,,0.0,,1,1
+Nearest-Edge,256.0,163.0,,0.0,,1,1
+Offline-Opt,1.0,0.0,,0.0,,1,0
+Offline-Opt,256.0,0.0,,0.0,,1,0
+QECO-net,1.0,2.8,0.8,0.0,0.0,3,0
+QECO-net,256.0,3.5,2.5,0.0,0.0,3,0
+QECO-net (open),1.0,7.1,,0.0,,1,0
+QECO-net (open),256.0,7.2,,0.0,,1,0
+QECO-net+,1.0,1.9,0.3,0.0,0.0,3,0
+QECO-net+,256.0,4.8,0.2,0.0,0.0,3,0
+QECO-orig,1.0,7.1,0.0,0.0,0.0,3,0
+QECO-orig,256.0,113.4,0.0,106.7,0.0,3,0
+QECO-orig (open),1.0,7.1,,0.0,,1,0
+QECO-orig (open),256.0,113.4,,106.7,,1,0

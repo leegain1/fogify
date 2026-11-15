@@ -1,0 +1,23 @@
+{
+ "variant": "netplus",
+ "episodes": 1000,
+ "seed": 1,
+ "reward": "delay",
+ "arrival": "closed",
+ "payload_probs": [
+  0.2,
+  0.2,
+  0.3,
+  0.3
+ ],
+ "rtt_dist": "log",
+ "gamma": 0.0,
+ "n_features": 14,
+ "n_lstm_state": 2,
+ "n_actions": 3,
+ "n_time": 1300,
+ "slot_ms": 10,
+ "max_delay_ms": 3000,
+ "best_episode": 674,
+ "best_val_tct_ms": 164.23
+}
