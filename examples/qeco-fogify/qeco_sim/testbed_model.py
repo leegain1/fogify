@@ -9,17 +9,21 @@ Updated in Phase 4.5 (closed loop, idle gap mean 200 ms, agent):
   edge server compute p50 71.3 ms: after an idle gap the E-core is ~3.6 ms slower
   than back to back (67.7). Phase 1's "overhead 0.9 ms" was RTT measured with ping;
   with the RTT the agent observes (/probe), TCT - compute - RTT = 0.3..0.5 ms.
+Updated again in Phase 4.5 after fixing the CPU (host/cpu_perf.sh on: performance governor,
+no C6+ on E-cores; E-cores at ~3.1 GHz): edge server compute 72.1 ms with or without an
+idle gap (std 0.4 ms, no drift), 124.4 ms under 80% stress, TCT - compute - RTT = 0.15 ms.
+Local unchanged (back to back 121 / 170 ms pattern, closed loop mean 97-100 ms).
 """
 import math
 
 ITER_REF = 1_000_000
-EDGE_WORK_MS = 71.3          # CPU time of one iter=1M task on one E-core (edge server), after an idle gap
-EDGE_WORK_B2B_MS = 67.7      # same, tasks back to back (Phase 1); kept for reference
+EDGE_WORK_MS = 72.1          # CPU time of one iter=1M task on one E-core (edge server), CPU fixed (Phase 4.5)
+# before fixing the CPU: 67.7 back to back, 71.3 after an idle gap, 80-90 in slow periods
 LOCAL_WORK_MS = 70.0         # same task on the local node (fitted to the bimodal local TCT, see phase3 doc)
-EDGE_OVERHEAD_MS = 0.4       # HTTP + scheduling not covered by RTT / transfer / compute (Phase 4.5; Phase 3: 0.9)
+EDGE_OVERHEAD_MS = 0.15      # HTTP + scheduling not covered by RTT / transfer / compute (Phase 4.5; Phase 3: 0.9)
 LOCAL_QUOTA_MS, CFS_PERIOD_MS = 50.0, 100.0   # Docker --cpus 0.5 -> 50 ms per 100 ms period
 EDGE_CORES = 2               # edge server quota 2.0 CPU; one task uses one core
-STRESS_COMPUTE_MS = 123.7    # compute under 80% stress (Phase 1); the core is busy, so no idle-gap effect
+STRESS_COMPUTE_MS = 124.4    # compute under 80% stress (Phase 4.5, CPU fixed; Phase 1: 123.7)
 STRESS_ALPHA = (1 - EDGE_WORK_MS / STRESS_COMPUTE_MS) / 0.8   # speed = 1 - alpha * load (fit at load 0.8)
 
 

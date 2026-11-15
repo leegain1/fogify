@@ -19,7 +19,7 @@
 | 2 | 원본 QECO(학습 기반 오프로딩) 코드를 그대로 돌려 재현 | 준비 (RQ3 비교 대상) | 완료 | [phase2-upstream.md](phase2-upstream.md) |
 | 3 | 테스트베드를 흉내 내는 시뮬레이터를 만들고 QECO를 학습함. QECO-orig와, RTT·대역폭·부하를 추가로 보는 QECO-net | RQ3 | 완료 | [phase3-sim.md](phase3-sim.md) |
 | 4 | 실제 Fogify에서 정책이 작업마다 로컬 / 엣지 서버 1 / 엣지 서버 2를 고르게 하는 드라이버 | RQ1~3 공통 도구 | 완료 | [phase4-driver.md](phase4-driver.md) |
-| 4.5 | 측정 방식과 학습 조건 바로잡기: 사후 최적(Offline-Opt) 계산 방식, closed-loop 작업 도착, 엣지 서버 보정, CPU 주파수 고정 | 공통 | 완료 | [phase4_5.md](phase4_5.md) |
+| 4.5 | 측정 방식과 학습 조건 바로잡기: 사후 최적(Offline-Opt) 계산 방식, closed-loop 작업 도착, 엣지 서버 보정, CPU 주파수 고정 (`host/cpu_perf.sh`) | 공통 | 완료 | [phase4_5.md](phase4_5.md) |
 | 3.5 | 바로잡은 시뮬레이터로 QECO를 재학습하고, 로컬 CPU 상태를 보는 QECO-net+를 추가. 시드 여러 개 | RQ3 | 진행 중 | phase3_5.md |
 | 5 | 본 실험. S1(RTT)·S2(대역폭)은 로컬과 엣지 서버가 갈리는 지점(RQ1), S3(두 엣지 서버의 부하 차이)는 RQ1·RQ2, 정책 비교는 RQ3 | RQ1, 2, 3 | 예정 | |
 | 6 | 최종 정리와 요약 | | 예정 | |
