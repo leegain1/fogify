@@ -1,11 +1,12 @@
 # 연구 노트: 로컬 처리 vs 엣지 서버 오프로딩 (Fogify)
 
-`docs/`, `docs-code/`는 Fogify 원본 문서다. **내 문서는 이 폴더의 두 파일뿐이다.**
+`docs/`, `docs-code/`는 Fogify 원본 문서다. 내 문서는 이 폴더에 있다.
 
 | 파일 | 내용 |
 |---|---|
 | `README.md` (이 문서) | 개요, 용어, 진행 상황, 실행 방법, 핵심 발견 |
 | [`uvc-sha256.md`](uvc-sha256.md) | SHA-256 실험 상세 기록: 원본 출처, 앱과 토폴로지 설계, 측정값, 결과 그래프 |
+| [`qeco-fogify/`](qeco-fogify/README.md) | QECO(학습 기반 오프로딩) × Fogify 실험: 단계별 요약과 Phase별 결과 (브랜치 `exp/qeco-fogify`) |
 
 ## 용어
 
