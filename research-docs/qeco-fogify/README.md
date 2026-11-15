@@ -22,7 +22,7 @@
 | 4.5 | 측정 방식과 학습 조건 바로잡기: 사후 최적(Offline-Opt) 계산 방식, closed-loop 작업 도착, 엣지 서버 보정, CPU 주파수 고정 (`host/cpu_perf.sh`) | 공통 | 완료 | [phase4_5.md](phase4_5.md) |
 | 3.5 | 바로잡은 시뮬레이터로 QECO를 재학습하고, 로컬 CPU 상태를 보는 QECO-net+를 추가. 시드 여러 개. 로컬 CPU를 0.2로 낮춰 엣지 서버가 약 5배 빠르게 | RQ3 | 완료 | [phase3_5.md](phase3_5.md) |
 | 5 | 본 실험. S1(RTT)·S2(대역폭)은 로컬과 엣지 서버가 갈리는 지점(RQ1), S3(두 엣지 서버의 부하 차이)는 RQ1·RQ2, S4(실행 중 조건 변화)와 정책 비교는 RQ3 | RQ1, 2, 3 | 완료 | [phase5.md](phase5.md) |
-| 6 | 최종 정리와 요약 | | 예정 | |
+| 6 | 최종 정리와 요약 | | 완료 | [../qeco-fogify.md](../qeco-fogify.md) |
 
 ## 지금까지의 결론 (Phase 5 기준)
 

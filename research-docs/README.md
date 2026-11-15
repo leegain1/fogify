@@ -6,7 +6,8 @@
 |---|---|
 | `README.md` (이 문서) | 개요, 용어, 진행 상황, 실행 방법, 핵심 발견 |
 | [`uvc-sha256.md`](uvc-sha256.md) | SHA-256 실험 상세 기록: 원본 출처, 앱과 토폴로지 설계, 측정값, 결과 그래프 |
-| [`qeco-fogify/`](qeco-fogify/README.md) | QECO(학습 기반 오프로딩) × Fogify 실험: 단계별 요약과 Phase별 결과 (브랜치 `exp/qeco-fogify`) |
+| [`qeco-fogify.md`](qeco-fogify.md) | **QECO(학습 기반 오프로딩) × Fogify 최종 정리**: 설계, 실행 방법, RQ1~3 결과, 발견한 문제, 요약 |
+| [`qeco-fogify/`](qeco-fogify/README.md) | 위 실험의 단계별 요약과 Phase별 상세 결과 (브랜치 `exp/qeco-fogify`) |
 
 ## 용어
 
