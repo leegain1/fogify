@@ -162,8 +162,8 @@ def s3_inversion(df, tab):
             for xi in x:
                 ax.text(xi, 1.02, str(i + 1), ha="center", fontsize=7)
         ax.set_xticks(range(len(loads))); ax.set_xticklabels([f"{l}%" for l in loads]); ax.set_ylim(0, 1.12)
-        ax.set_title(f"choice share (gray local, red E1, blue E2): " + ", ".join(f"{i + 1}={p}" for i, p in enumerate(pols)),
-                     fontsize=7)
+        ax.set_title(f"S3, {kb} KB: choice share (gray local, red E1, blue E2)", fontsize=9)
+        ax.set_xlabel("edge-server-1 CPU load   |   " + ", ".join(f"{i + 1}={p}" for i, p in enumerate(pols)), fontsize=7)
     plt.tight_layout(); plt.savefig(f"{R}/P5_s3_inversion.png", dpi=110)
     pd.DataFrame(out).to_csv(f"{R}/P5_s3_inversion.csv", index=False)
     print(pd.DataFrame(out).to_string())
@@ -193,10 +193,11 @@ def s4():
             ax[0].plot(g.t_s, g.tct_ms.rolling(5, min_periods=1).median(), color=COLORS[p], label=p,
                        lw=2 if p == "QECO-net+" else 1)
     from phase5 import S4_SEGMENT_S, S4_TIMELINE
+    starts = df.groupby("segment").t_s.min()   # actual segment starts (changes take ~2 s per link)
     for i, (a, b) in enumerate(S4_TIMELINE):
-        ax[0].axvline(i * S4_SEGMENT_S, color="k", lw=0.5)
-        ax[0].text(i * S4_SEGMENT_S + 1, ax[0].get_ylim()[1] if i else 300,
-                   f"E1 {a[0]}ms/{a[1]}M/{a[2]}%\nE2 {b[0]}ms", fontsize=7, va="top")
+        x0 = starts.get(i, i * S4_SEGMENT_S)
+        ax[0].axvline(x0, color="k", lw=0.5)
+        ax[0].text(x0 + 1, ax[0].get_ylim()[1], f"E1 {a[0]}ms/{a[1]}M/{a[2]}%\nE2 {b[0]}ms", fontsize=7, va="top")
     ax[0].set_yscale("log"); ax[0].set_ylabel("TCT (ms), rolling median of 5"); ax[0].legend(fontsize=7, ncol=3)
     ax[0].set_xlabel("time (s)"); ax[0].grid(alpha=0.3)
     ax[1].barh(tot.index, tot.values, color=[COLORS[p] for p in tot.index]); ax[1].invert_yaxis()

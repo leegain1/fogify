@@ -65,10 +65,14 @@ def ping_ms(edge_server, count=5):
 
 def deploy(pin=True, timeout=300):
     fogify.deploy(timeout=timeout)
-    # network rules are applied a few seconds after deploy -> wait until RTT shows up
-    for _ in range(30):
-        if ping_ms("edge-server-1") > 8 and ping_ms("edge-server-2") > 8:
-            break
+    # swarm tasks can start a few seconds after deploy() returns, and the network rules after
+    # that -> wait until the containers exist and the RTT shows up
+    for _ in range(60):
+        try:
+            if ping_ms("edge-server-1") > 8 and ping_ms("edge-server-2") > 8:
+                break
+        except RuntimeError:   # container not created yet
+            pass
         time.sleep(2)
     return pin_cpus() if pin else None
 

@@ -1,0 +1,12 @@
+policy,mean_abs_diff_ms,mean_diff_ms,mean_abs_pct,local_share_gap,local_share_sim
+Always-Local,16.5,16.5,5.9,1.0,1.0
+Always-Edge1,24.5,22.8,10.4,0.0,0.0
+Always-Edge2,30.5,29.8,15.0,0.0,0.0
+Nearest-Edge,35.2,32.4,15.1,0.0,0.0
+Model-Greedy,32.5,31.7,16.0,0.0,0.04
+QECO-orig (open),9.8,9.2,3.9,0.5,0.5
+QECO-net (open),21.5,20.8,13.7,0.1,0.12
+QECO-orig,9.6,9.0,3.8,0.5,0.5
+QECO-net,27.7,26.4,14.5,0.0,0.04
+QECO-net+,29.1,28.1,17.2,0.1,0.04
+Offline-Opt,6.9,5.5,4.5,0.1,0.12

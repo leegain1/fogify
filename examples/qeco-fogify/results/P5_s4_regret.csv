@@ -1,0 +1,12 @@
+policy,regret
+Always-Local,200.1
+Always-Edge1,19.2
+Always-Edge2,39.0
+Nearest-Edge,6.3
+Model-Greedy,2.6
+QECO-orig (open),37.1
+QECO-net (open),8.3
+QECO-orig,38.2
+QECO-net,2.6
+QECO-net+,1.9
+Offline-Opt,0.0

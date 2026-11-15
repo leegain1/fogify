@@ -56,13 +56,28 @@ def stop_stress(edge="edge-server-1"):
     CURRENT.pop("load", None)
     subprocess.run(["docker", "exec", tb.container(edge), "pkill", "-f", "stress"], capture_output=True)
     subprocess.run(["docker", "exec", tb.container(edge), "pkill", "-f", "cpulimit"], capture_output=True)
-    tb.wait_stress_done(edge)
+    # killed stress / cpulimit stay as zombies (uvc-server as PID 1 does not reap them), so
+    # testbed.wait_stress_done (pgrep) would wait forever: wait for live processes only
+    for _ in range(30):
+        ps = subprocess.run(["docker", "exec", tb.container(edge), "ps", "-o", "stat,comm"],
+                            capture_output=True, text=True).stdout.splitlines()[1:]
+        if not any(l.split()[0][0] != "Z" and ("stress" in l or "cpulimit" in l) for l in ps if l.split()):
+            return
+        time.sleep(1)
 
 
 CURRENT = {}   # what apply() last set: {edge: (rtt, bw)}, "load": edge-server-1 load
 
 
-def apply(bed, links, settle_s=6):
+def direct_stress(load, edge="edge-server-1"):
+    """Same command Fogify runs for a stress action (cpulimit --limit cpus*cpu -i -- stress --cpu
+    ceil(cpus), edge server = 2 CPU), but exec'd directly: the Fogify API call took 10-30 s
+    to take effect, too slow for the 20 s segments of S4."""
+    subprocess.run(["docker", "exec", "-d", tb.container(edge), "cpulimit", "--limit", str(int(2 * load)), "-i",
+                    "--", "stress", "--cpu", "2"], check=True, capture_output=True)
+
+
+def apply(bed, links, settle_s=6, direct=False):
     """Set links and edge-server-1 load; only what changed. settle_s: wait for the tc rules
     and the cAdvisor load (1-2 s behind) before tasks run (S4: 0, the lag is part of it)."""
     for e, (rtt, bw, _) in zip(dr.EDGES, links):
@@ -72,7 +87,9 @@ def apply(bed, links, settle_s=6):
     load = links[0][2]
     if CURRENT.get("load", -1) != load:
         stop_stress()
-        if load:
+        if load and direct:
+            direct_stress(load)
+        elif load:
             bed.stress("edge-server-1", cpu=load, duration=1800)
         CURRENT["load"] = load
     time.sleep(settle_s)
@@ -121,15 +138,16 @@ def run_s4(bed, policies, kb=1):
     for p in policies:
         if p in done:
             continue
-        apply(bed, list(S4_TIMELINE[0]))
+        apply(bed, list(S4_TIMELINE[0]), direct=True)
         stop = threading.Event()
         marks = []
 
         def timeline():
+            # a segment starts when its links and load are in place (set_link takes ~2 s per link)
             for i, links in enumerate(S4_TIMELINE):
-                marks.append((time.time(), i))
                 if i:
-                    apply(bed, list(links), settle_s=0)
+                    apply(bed, list(links), settle_s=0, direct=True)
+                marks.append((time.time(), i))
                 if stop.wait(S4_SEGMENT_S):
                     return
             stop.set()
