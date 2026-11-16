@@ -30,7 +30,10 @@ CPUSETS = {"local": "14", "edge-server-1": "8,9", "edge-server-2": "12,13"}
 fogify = None
 
 
-def connect(compose="docker-compose.yaml"):
+def connect(compose=None):
+    """compose: Fogify compose file; default $QECO_COMPOSE or docker-compose.yaml."""
+    import os
+    compose = compose or os.environ.get("QECO_COMPOSE", "docker-compose.yaml")
     global fogify
     fogify = FogifySDK("http://controller:5000", compose)
     return fogify

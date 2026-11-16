@@ -1,0 +1,12 @@
+policy,on,off
+Always-Local,18.2,19.8
+Always-Edge1,47.2,11.0
+Always-Edge2,59.7,11.0
+Nearest-Edge,68.4,10.8
+Model-Greedy,63.8,4.8
+QECO-orig (open),18.4,20.1
+QECO-net (open),41.7,7.2
+QECO-orig,18.1,18.3
+QECO-net,53.6,4.0
+QECO-net+,56.7,10.6
+Offline-Opt,11.8,4.2

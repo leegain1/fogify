@@ -117,7 +117,7 @@ def sim_vs_testbed(tab):
 def s3_inversion(df, tab):
     """S3: edge-server-1 (RTT 10, load L) vs edge-server-2 (RTT 50, idle) vs local."""
     fig, axes = plt.subplots(2, 2, figsize=(12, 8.5))
-    loads = [0, 30, 60, 80]
+    loads = sorted(int(c.rsplit(" ", 1)[1]) for c in tab[tab.scenario == "S3"].condition.unique())
     out = []
     for c, kb in enumerate((1, 256)):
         ax = axes[0, c]

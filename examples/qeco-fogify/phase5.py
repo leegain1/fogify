@@ -25,10 +25,20 @@ import pandas as pd
 import driver as dr
 import testbed as tb
 
-OUT = "results/P5_runs.csv"
+# P5_OUT / P5_PAYLOADS / QECO_COMPOSE select a variant run, e.g. the 256 KB rerun with TCP slow
+# start after idle turned off: QECO_COMPOSE=docker-compose-noss.yaml P5_PAYLOADS=256
+# P5_OUT=results/P5_noss_runs.csv python phase5.py static
+OUT = os.environ.get("P5_OUT", "results/P5_runs.csv")
 OUT_S4 = "results/P5_s4.csv"
 ROUNDS, PER_ROUND = 3, 10
-PAYLOADS = (1, 256)
+ALL_PAYLOADS = (1, 256)
+PAYLOADS = tuple(int(x) for x in os.environ.get("P5_PAYLOADS", "1,256").split(","))
+
+
+# S3 loads; 90% was added after the main run (1 KB) to show the loss of Nearest-Edge well past the
+# inversion point (~72%): P5_S3_LOADS=90 P5_PAYLOADS=1 P5_ONLY=S3 python phase5.py static
+S3_LOADS = tuple(int(x) for x in os.environ.get("P5_S3_LOADS", "0,30,60,80").split(","))
+ONLY = os.environ.get("P5_ONLY")
 
 
 def conditions():
@@ -37,7 +47,7 @@ def conditions():
         yield "S1", f"RTT {rtt}", [(rtt, 100, 0), (rtt, 100, 0)]
     for bw in (100, 10, 1):
         yield "S2", f"BW {bw}", [(10, bw, 0), (10, bw, 0)]
-    for load in (0, 30, 60, 80):
+    for load in S3_LOADS:
         yield "S3", f"E1 load {load}", [(10, 100, load), (50, 100, 0)]
 
 
@@ -97,10 +107,11 @@ def apply(bed, links, settle_s=6, direct=False):
 
 def run_static(bed, policies):
     done = set(pd.read_csv(OUT).label.unique()) if os.path.exists(OUT) else set()
-    ci = 0
     for kb in PAYLOADS:
-        for scen, name, links in conditions():
-            ci += 1
+        for j, (scen, name, links) in enumerate(conditions()):
+            ci = ALL_PAYLOADS.index(kb) * len(list(conditions())) + j + 1   # same seeds as the full run
+            if ONLY and scen != ONLY:
+                continue
             labels = [f"{scen}|{name}|{kb}KB|r{k}" for k in range(ROUNDS)]
             if all(l in done for l in labels):
                 continue
